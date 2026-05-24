@@ -1,0 +1,16 @@
+.wrapper{
+    display: flex;
+    flex-direction: column;
+    gap: var(--gaps-l);
+    height: 100%;
+
+    .content{
+        text-align: center;
+    }
+
+    .columnsWrapper{
+        display: flex;
+        gap: var(--gaps-l);
+        height: 100%;
+    }
+}

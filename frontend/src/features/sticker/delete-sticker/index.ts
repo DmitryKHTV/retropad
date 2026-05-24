@@ -1,0 +1,1 @@
+export {DeleteStickerButton} from "./ui/DeleteStickerButton";

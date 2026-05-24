@@ -1,0 +1,7 @@
+.boardsList{
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gaps-m);
+    width: 100%;
+}

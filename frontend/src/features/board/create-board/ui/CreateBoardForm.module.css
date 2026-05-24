@@ -1,0 +1,7 @@
+.wrapper {
+    display: flex;
+    gap: var(--gaps-m);
+    padding: var(--padding-m);
+    background-color: var(--background-color-secondary);
+    border-radius: var(--border-radius-m);
+}

@@ -1,0 +1,1 @@
+export type {Sticker} from "./types";

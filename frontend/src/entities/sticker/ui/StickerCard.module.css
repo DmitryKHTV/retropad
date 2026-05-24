@@ -1,0 +1,18 @@
+.wrapper{
+    padding: var(--padding-m);
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--gaps-m);
+    min-width: 0;
+
+    &:not(:last-child){
+        border-bottom: 1px solid var(--background-color);
+    }
+
+    .content{
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+}

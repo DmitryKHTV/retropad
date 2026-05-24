@@ -1,0 +1,28 @@
+.button{
+    padding: var(--padding-m) var(--padding-l);
+    border-radius: var(--border-radius-s);
+    border: none;
+
+    &.main{
+        background-color: var(--color-main);
+        &:hover:not(:disabled){
+            background-color: var(--color-main-hover);
+        }
+    }
+
+    &.secondary{
+        background-color: var(--color-secondary);
+        &:hover:not(:disabled){
+            background-color: var(--color-secondary-hover);
+        }
+    }
+
+    &:hover:not(:disabled){
+        cursor: pointer;
+    }
+
+    &:disabled{
+        opacity: 0.6;
+    }
+}
+

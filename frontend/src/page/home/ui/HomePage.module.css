@@ -1,0 +1,8 @@
+.boardsWrapper{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 600px;
+    align-self: center;
+    gap: var(--gaps-l);
+}

@@ -1,0 +1,26 @@
+.wrapper{
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-width: 0;
+
+    background-color: var(--background-color-secondary);
+    border-radius: var(--border-radius-m);
+    padding: var(--padding-m);
+    height: fit-content;
+    gap: var(--gaps-m);
+
+    .content{
+        text-align: center;
+    }
+
+    .stickers{
+        display: flex;
+        flex-direction: column;
+        gap: var(--gaps-m);
+
+        .noStickersText{
+            text-align: center;
+        }
+    }
+}

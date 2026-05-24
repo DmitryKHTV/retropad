@@ -1,0 +1,51 @@
+.loginForm{
+    display: flex;
+    flex-direction: column;
+    gap: var(--gaps-m);
+    padding: var(--padding-l);
+    border-radius: var(--border-radius-m);
+    width: 100%;
+    max-width: 700px;
+
+    background-color: var(--background-color-secondary);
+    align-self: center;
+    justify-self: center;
+    animation: showUp ease-in-out 0.5s forwards;
+
+    .options{
+        flex: 1;
+        display: flex;
+        gap: var(--gaps-m);
+        justify-content: stretch;
+        margin-top: var(--gaps-l);
+
+        button{
+            flex-basis: 50%;
+        }
+    }
+
+    .header{
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        margin-bottom: var(--gaps-l);
+        color: var(--color-white);
+    }
+
+    .error{
+        margin: 0;
+        color: var(--color-error, #ef4444);
+        font-size: 0.875rem;
+    }
+}
+
+@keyframes showUp {
+    from{
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to{
+        transform: none;
+        opacity: 1;
+    }
+}

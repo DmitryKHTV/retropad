@@ -1,0 +1,1 @@
+export {useDeleteSticker} from "./use-delete-sticker";
