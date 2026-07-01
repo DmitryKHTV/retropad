@@ -56,4 +56,16 @@ export class ColumnsService {
             return tx.column.update({where: {id: columnId}, data: dto});
         });
     }
+
+    async remove(columnId: string, requesterId: string): Promise<Column> {
+        const current = await this.prisma.column.findUnique({
+            where: {id: columnId},
+            select: {board: {select: {ownerId: true}}},
+        });
+
+        if (!current) { throw new NotFoundException("No such column"); }
+        if (current.board.ownerId !== requesterId) { throw new ForbiddenException("You're not an owner of this board"); }
+
+        return this.prisma.column.delete({where: {id: columnId}});
+    }
 }
