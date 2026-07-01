@@ -36,7 +36,7 @@ export const AddStickerButton = (props: AddStickerButtonProps) => {
 
     return (
         <>
-            {isAddingNewSticker ?<Button onClick={onCreate} disabled={!stickerText  || isPending}>Create</Button> : <Button onClick={onSwitchToCreate}>+ Add Sticker</Button>}
+            {isAddingNewSticker ?<Button intent="success" onClick={onCreate} disabled={!stickerText  || isPending}>Create</Button> : <Button intent="success" outline onClick={onSwitchToCreate}>+ Add Sticker</Button>}
             {isAddingNewSticker && <textarea placeholder={"Enter sticker text"} value={stickerText} onChange={onStickerTextChange}/>}
         </>
     )

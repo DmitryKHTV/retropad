@@ -15,7 +15,7 @@ export const DeleteBoardButton = (props: DeleteBoardDto) => {
     }
 
     return (
-        <Button mode="secondary" onClick={onDelete} aria-label="Delete board">
+        <Button intent="danger" onClick={onDelete} aria-label="Delete board">
             <IconDelete className={cls.deleteIcon}/>
         </Button>
     )
