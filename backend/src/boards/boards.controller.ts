@@ -1,6 +1,6 @@
-import {Body, Controller, Delete, Get, Param, Post, UseGuards} from '@nestjs/common';
+import {Body, Controller, Delete, Get, Param, Patch, Post, UseGuards} from '@nestjs/common';
 import {BoardsService} from "./boards.service";
-import {CreateBoardDto, FindBoardParamsDto} from "./dto";
+import {CreateBoardDto, FindBoardParamsDto, UpdateBoardDto} from "./dto";
 import {JwtAuthGuard} from "../auth/guards";
 import {CurrentUser, type SafeUser} from "../auth/decorators";
 
@@ -22,6 +22,11 @@ export class BoardsController {
     @Post()
     create(@CurrentUser() user: SafeUser, @Body() dto: CreateBoardDto) {
         return this.boardsService.create(dto.title, user.id);
+    }
+
+    @Patch(':id')
+    update(@CurrentUser() user: SafeUser, @Param() params: FindBoardParamsDto, @Body() dto: UpdateBoardDto) {
+        return this.boardsService.update(params.id, user.id, dto);
     }
 
     @Delete(':id')
