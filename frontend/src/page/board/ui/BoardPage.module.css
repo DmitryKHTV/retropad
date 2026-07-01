@@ -3,6 +3,7 @@
     flex-direction: column;
     gap: var(--gaps-l);
     height: 100%;
+    align-items: center;
 
     .content{
         text-align: center;
@@ -12,5 +13,28 @@
         display: flex;
         gap: var(--gaps-l);
         height: 100%;
+        overflow-x: auto;
+        width: 100%;
+
+        scrollbar-width: thin;
+        scrollbar-color: var(--surface-raised-top) transparent;
+
+        &::-webkit-scrollbar{
+            height: 8px;
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-track{
+            background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb{
+            background: var(--surface-raised-top);
+            border-radius: var(--border-radius-l);
+        }
+
+        &::-webkit-scrollbar-thumb:hover{
+            background: var(--surface-card);
+        }
     }
 }
