@@ -20,6 +20,6 @@ export const DeleteStickerButton = (props: AddStickerButtonProps) => {
 
 
     return (
-            <Button onClick={onDelete} disabled={isPending}><CaiIcon/></Button>
+            <Button intent="danger" onClick={onDelete} disabled={isPending} aria-label="Delete sticker"><CaiIcon/></Button>
     )
 }

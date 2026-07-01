@@ -66,13 +66,12 @@ export const RegisterForm = ({ onAuthorizationModeChange }: RegisterFormProps) =
         </p>
       )}
       <div className={cls.options}>
-        <Button type="submit" disabled={isPending}>
+        <Button intent="primary" type="submit" disabled={isPending}>
           {isPending ? 'Registering…' : 'Register'}
         </Button>
         <Button
           onClick={onAuthorizationModeChange}
           type="button"
-          mode="secondary"
           disabled={isPending}
         >
           Authorize

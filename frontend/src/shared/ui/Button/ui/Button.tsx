@@ -2,14 +2,16 @@ import {ButtonHTMLAttributes, DetailedHTMLProps} from "react";
 import cls from "./Button.module.css";
 import classNames from "classnames";
 
+export type ButtonIntent = 'neutral' | 'primary' | 'edit' | 'danger' | 'success';
 
 type ButtonProps = {
-    mode?: 'main' | 'secondary'
+    intent?: ButtonIntent;
+    outline?: boolean;
 } & DetailedHTMLProps<ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>;
 
 export const Button = (props: ButtonProps) => {
-    const {mode='main', ...otherProps} = props;
+    const {intent = 'neutral', outline = false, className, ...otherProps} = props;
     return (
-        <button className={classNames(cls.button, cls[mode])} {...otherProps}/>
+        <button className={classNames(cls.button, cls[intent], outline && cls.outline, className)} {...otherProps}/>
     )
 }
