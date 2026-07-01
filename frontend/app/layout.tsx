@@ -1,7 +1,9 @@
 import type {Metadata} from 'next';
 import '@/shared/config/styles/index.css';
 import {Providers} from '@/app/providers';
+import {Navbar} from '@/widgets/navbar';
 import {JetBrains_Mono} from "next/font/google";
+import cls from './layout.module.css';
 
 const jetbrainsMono = JetBrains_Mono({
     subsets: ["latin", "cyrillic"],
@@ -19,7 +21,10 @@ export default function RootLayout({children}: Readonly<{ children: React.ReactN
         <html lang="en">
         <body className={jetbrainsMono.className}>
         <Providers>
-            {children}
+            <Navbar/>
+            <div className={cls.content}>
+                {children}
+            </div>
         </Providers>
         </body>
         </html>
