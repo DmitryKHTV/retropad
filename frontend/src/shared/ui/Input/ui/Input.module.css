@@ -1,5 +1,11 @@
 .input{
-    border: 1px solid gray;
+    background: var(--surface-input);
+    border: 1px solid var(--border-focus);
     border-radius: var(--border-radius-s);
+    color: var(--text-white);
     padding: 5px 10px;
+}
+
+.input::placeholder{
+    color: var(--placeholder);
 }

@@ -1,32 +1,82 @@
 :root {
-    /* colors */
-    --color-main: #E6F082;
-    --color-main-hover: #D8D365;
-    --color-secondary: #8e8b74;
-    --color-secondary-hover: #73705d;
-    --color-white: #D1D1D1;
+    /* Surfaces */
+    --surface-base: #060606;
+    --surface-base-glow: #141414;
+    --surface-raised-top: #161616;
+    --surface-raised-bottom: #101010;
+    --surface-card: #1c1c1c;
+    --surface-input: #1b1b1b;
+    --surface-input-alt: #222222;
+    --surface-title-input: #151515;
+    --surface-header-tint: rgba(255, 255, 255, 0.025);
+    --surface-navbar: rgba(12, 12, 12, 0.72);
+    --surface-btn-faint: rgba(255, 255, 255, 0.02);
+    --surface-btn-soft: rgba(255, 255, 255, 0.03);
+    --surface-btn-add: rgba(255, 255, 255, 0.04);
+    --surface-add-sticker: rgba(255, 255, 255, 0.015);
+    --surface-count-pill: rgba(255, 255, 255, 0.06);
 
-    /* gaps */
+    /* Borders */
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --border-card: rgba(255, 255, 255, 0.12);
+    --border-btn-add: rgba(255, 255, 255, 0.14);
+    --border-header: rgba(255, 255, 255, 0.08);
+    --border-focus: rgba(255, 255, 255, 0.3);
+    --border-dashed: rgba(255, 255, 255, 0.2);
+    --border-card-hover: rgba(255, 255, 255, 0.28);
+
+    /* Highlights & shadows */
+    --highlight-edge: rgba(255, 255, 255, 0.09);
+    --highlight-edge-soft: rgba(255, 255, 255, 0.07);
+    --shadow-drop: rgba(0, 0, 0, 0.5);
+
+    /* Text */
+    --text-primary: #f4f4f4;
+    --text-white: #ffffff;
+    --text-body: #ececec;
+    --text-secondary: #cfcfcf;
+    --text-secondary-2: #dcdcdc;
+    --text-icon: #bcbcbc;
+    --text-icon-2: #b4b4b4;
+    --text-muted: #9a9a9a;
+    --text-faint: #7a7a7a;
+    --text-disabled: #5e5e5e;
+    --placeholder: rgba(255, 255, 255, 0.35);
+
+    /* Accent Edit (blue) */
+    --accent-edit: #4a86ff;
+    --accent-edit-fg: #7aa8ff;
+    --accent-edit-bg: rgba(74, 134, 255, 0.18);
+    --accent-edit-border: rgba(74, 134, 255, 0.5);
+
+    /* Accent Danger (red) */
+    --accent-danger: #e5484d;
+    --accent-danger-fg: #ff6b6f;
+    --accent-danger-bg: rgba(229, 72, 77, 0.16);
+    --accent-danger-border: rgba(229, 72, 77, 0.4);
+
+    /* Accent Success (green) */
+    --accent-success: #2dc47d;
+    --accent-success-fg: #4fdc9a;
+    --accent-success-bg: rgba(45, 196, 125, 0.16);
+    --accent-success-bg-soft: rgba(45, 196, 125, 0.1);
+    --accent-success-border: rgba(45, 196, 125, 0.5);
+    --accent-success-border-strong: rgba(45, 196, 125, 0.6);
+
+    /* Layout tokens (spacing / radius) */
     --gap-s: 4px;
     --gaps-m: 8px;
     --gaps-l: 16px;
 
-
-    /* paddings */
     --padding-s: 4px;
     --padding-m: 8px;
     --padding-l: 16px;
 
-    /* borders */
     --border-radius-s: 4px;
     --border-radius-m: 8px;
     --border-radius-l: 16px;
 
-
-    /* TODO: make theming */
-    --background-color: #454040;
-    --background-color-secondary: #605B51;
-    --background-color-secondary-hover: #4e4a41;
+    --border: 1px solid var(--border-subtle);
 }
 
 
@@ -47,7 +97,7 @@ time, mark, audio, video {
     padding: 0;
     border: 0;
     vertical-align: baseline;
-    color: inherit;
+    color: var(--text-body);
 }
 
 
@@ -66,28 +116,27 @@ html, body {
 
 body {
     line-height: 1;
-    background-color: var(--background-color);
-    padding: 32px;
+    background: radial-gradient(120% 80% at 50% -10%, var(--surface-base-glow), var(--surface-base) 60%);
+    color: var(--text-primary);
 }
+
 ol, ul {
     list-style: none;
 }
+
 blockquote, q {
     quotes: none;
 }
+
 blockquote:before, blockquote:after,
 q:before, q:after {
     content: '';
     content: none;
 }
+
 table {
     border-collapse: collapse;
     border-spacing: 0;
-}
-
-body[data-theme="dark"] {
-    --background-color: var(--dark-blue);
-    --background-color-secondary: var(--dark-blue-secondary)
 }
 
 button,
@@ -96,4 +145,18 @@ textarea,
 select {
     font: inherit;
     color: inherit;
+}
+
+textarea {
+    background: var(--surface-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--border-radius-s);
+    color: var(--text-white);
+    padding: var(--padding-m);
+    resize: vertical;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--placeholder);
 }

@@ -7,7 +7,9 @@
     width: 100%;
     max-width: 700px;
 
-    background-color: var(--background-color-secondary);
+    background: linear-gradient(180deg, var(--surface-raised-top), var(--surface-raised-bottom));
+    border: 1px solid var(--border-subtle);
+    box-shadow: inset 0 1px 0 var(--highlight-edge), 0 8px 28px var(--shadow-drop);
     align-self: center;
     justify-self: center;
     animation: showUp ease-in-out 0.5s forwards;
@@ -29,12 +31,12 @@
         display: flex;
         justify-content: center;
         margin-bottom: var(--gaps-l);
-        color: var(--color-white);
+        color: var(--text-white);
     }
 
     .error{
         margin: 0;
-        color: var(--color-error, #ef4444);
+        color: var(--accent-danger);
         font-size: 0.875rem;
     }
 }
