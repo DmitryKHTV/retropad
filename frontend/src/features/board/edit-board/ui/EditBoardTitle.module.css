@@ -1,0 +1,11 @@
+.root {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gaps-m);
+}
+
+.title {
+    margin: 0;
+    text-align: center;
+}
