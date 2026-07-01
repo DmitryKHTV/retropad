@@ -1,6 +1,7 @@
 import {ForbiddenException, Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
 import { Board, Prisma } from '@prisma/client';
+import {UpdateBoardDto} from "./dto";
 
 export type BoardWithColumns = Prisma.BoardGetPayload<{
     include: {
@@ -61,6 +62,20 @@ export class BoardsService {
                 },
             },
         });
+    }
+
+    async update(id: string, requesterId: string, dto: UpdateBoardDto): Promise<Board> {
+        const board = await this.prisma.board.findUnique({ where: { id } });
+
+        if (!board) {
+            throw new NotFoundException(`Board with id ${id} not found`);
+        }
+
+        if (board.ownerId !== requesterId) {
+            throw new ForbiddenException('You do not have access to this board');
+        }
+
+        return this.prisma.board.update({ where: { id }, data: dto });
     }
 
     async remove(id: string, requesterId: string): Promise<Board> {
