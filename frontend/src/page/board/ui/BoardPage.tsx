@@ -1,10 +1,13 @@
 'use client'
 
+import {useState} from "react";
 import {useBoard} from "@/entities/board";
 import cls from "./BoardPage.module.css";
 import {
     DndContext,
+    DragOverlay,
     type DragEndEvent,
+    type DragStartEvent,
     PointerSensor,
     useSensor,
     useSensors,
@@ -12,6 +15,9 @@ import {
 } from '@dnd-kit/core';
 import {SortableContext, horizontalListSortingStrategy} from '@dnd-kit/sortable';
 import {SortableColumn, useReorderColumn} from "@/features/column/reorder-column";
+import {AddColumnButton} from "@/features/column/add-column";
+import {EditBoardTitle} from "@/features/board/edit-board";
+import {BoardColumn} from "@/widgets/board-column";
 
 interface BoardPageProps {
     id: string;
@@ -22,6 +28,8 @@ export const BoardPage = (props: BoardPageProps) => {
     const {data: boardData} = useBoard(id);
     const reorderMutation = useReorderColumn();
 
+    const [activeId, setActiveId] = useState<string | null>(null);
+
     const sensors = useSensors(
         useSensor(PointerSensor, {activationConstraint: {distance: 5}}),
     );
@@ -30,8 +38,14 @@ export const BoardPage = (props: BoardPageProps) => {
 
     const columns = boardData.columns;
     const columnIds = columns.map((c) => c.id);
+    const activeColumn = columns.find((c) => c.id === activeId) ?? null;
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(String(event.active.id));
+    };
 
     const handleDragEnd = (event: DragEndEvent) => {
+        setActiveId(null);
         const {active, over} = event;
         if (!over || active.id === over.id) return;
 
@@ -48,15 +62,27 @@ export const BoardPage = (props: BoardPageProps) => {
 
     return (
         <main className={cls.wrapper}>
-            <h1 className={cls.title}>{boardData.title}</h1>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <EditBoardTitle id={boardData.id} title={boardData.title} />
+            <AddColumnButton boardId={id} order={columns.length} />
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={() => setActiveId(null)}
+            >
                 <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
                     <div className={cls.columnsWrapper}>
                         {columns.map((column) => (
-                            <SortableColumn key={`column-${column.id}`} column={column} />
+                            <SortableColumn key={`column-${column.id}`} id={column.id}>
+                                <BoardColumn column={column} />
+                            </SortableColumn>
                         ))}
                     </div>
                 </SortableContext>
+                <DragOverlay dropAnimation={null}>
+                    {activeColumn ? <BoardColumn column={activeColumn} /> : null}
+                </DragOverlay>
             </DndContext>
         </main>
     );

@@ -1,0 +1,8 @@
+.root{
+    display: flex;
+    flex-direction: column;
+    gap: var(--gaps-m);
+    flex: 0 0 auto;
+    align-self: center;
+    width: 220px;
+}
