@@ -16,13 +16,18 @@ export const useReorderColumn = () => {
 
         onMutate: async ({ boardId, columnId, newOrder }) => {
             const key = boardQueryKey(boardId);
-            await queryClient.cancelQueries({ queryKey: key });
 
             const previous = queryClient.getQueryData<BoardWithColumns>(key);
-            if (!previous) return { previous };
+            if (!previous) {
+                await queryClient.cancelQueries({ queryKey: key });
+                return { previous };
+            }
 
             const oldIndex = previous.columns.findIndex((c) => c.id === columnId);
-            if (oldIndex === -1) return { previous };
+            if (oldIndex === -1) {
+                await queryClient.cancelQueries({ queryKey: key });
+                return { previous };
+            }
 
             const next = [...previous.columns];
             const [moved] = next.splice(oldIndex, 1);
@@ -34,6 +39,8 @@ export const useReorderColumn = () => {
                 ...previous,
                 columns: reindexed,
             });
+
+            await queryClient.cancelQueries({ queryKey: key });
 
             return { previous };
         },
