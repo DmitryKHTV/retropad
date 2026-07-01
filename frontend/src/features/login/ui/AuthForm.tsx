@@ -40,13 +40,12 @@ export const AuthForm = ({ onRegisterModeSwitch }: AuthFormProps) => {
         </p>
       )}
       <div className={cls.options}>
-        <Button type="submit" disabled={isPending}>
+        <Button intent="primary" type="submit" disabled={isPending}>
           {isPending ? 'Submitting…' : 'Submit'}
         </Button>
         <Button
           onClick={onRegisterModeSwitch}
           type="button"
-          mode="secondary"
           disabled={isPending}
         >
           Register

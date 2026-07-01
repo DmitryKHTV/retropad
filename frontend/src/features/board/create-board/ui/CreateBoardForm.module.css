@@ -2,6 +2,8 @@
     display: flex;
     gap: var(--gaps-m);
     padding: var(--padding-m);
-    background-color: var(--background-color-secondary);
+    background: var(--surface-card);
+    border: 1px solid var(--border-card);
+    box-shadow: inset 0 1px 0 var(--highlight-edge-soft);
     border-radius: var(--border-radius-m);
 }
