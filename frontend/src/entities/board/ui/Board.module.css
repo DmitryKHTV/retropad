@@ -18,3 +18,14 @@
 .deleteIcon {
     font-size: 1.25rem;
 }
+
+.roleBadge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    padding: 2px 8px;
+    border-radius: var(--border-radius-l);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+}
