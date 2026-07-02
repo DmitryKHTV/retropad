@@ -4,7 +4,7 @@ import {DeleteBoardButton} from "@/features/board/delete-board/ui/DeleteBoardBut
 import Link from "next/link";
 
 export const BoardCard = (props: Board) => {
-    const {title, updatedAt, id} = props;
+    const {title, updatedAt, id, myRole} = props;
 
     return (
         <Link href={`/board/${id}`} className={cls.wrapper}>
@@ -12,7 +12,9 @@ export const BoardCard = (props: Board) => {
                 <p>{title}</p>
                 <p>{updatedAt}</p>
             </div>
-            <DeleteBoardButton id={id}/>
+            {myRole === 'OWNER'
+                ? <DeleteBoardButton id={id}/>
+                : <span className={cls.roleBadge}>{myRole}</span>}
         </Link>
     )
 }
