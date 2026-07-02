@@ -42,6 +42,8 @@ src/
   boards/        # Boards (with owner); auto-seeds 3 default columns on create
   columns/       # Columns (belong to a board)
   stickers/      # Stickers (belong to a column, ordered)
+  members/       # Board members (EDITOR/VIEWER collaborators, added by email)
+  board-access/  # BoardAccessService — central role resolution + authz asserts
   prisma/        # Global PrismaService
   config/        # Env validation
 ```
@@ -80,6 +82,7 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   boards       Board[]
+  memberships  BoardMember[]
 }
 
 model Board {
@@ -88,9 +91,27 @@ model Board {
   ownerId   String
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   columns   Column[]
+  members   BoardMember[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([ownerId])
+}
+
+// OWNER is never stored — synthesized from Board.ownerId (single source of truth)
+enum BoardRole {
+  EDITOR
+  VIEWER
+}
+
+model BoardMember {
+  boardId   String
+  userId    String
+  role      BoardRole @default(EDITOR)
+  createdAt DateTime  @default(now())
+  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([boardId, userId])
+  @@index([userId])
 }
 
 model Column {
@@ -154,11 +175,21 @@ Guards are applied at controller level: `@UseGuards(JwtAuthGuard)` above `@Contr
 - **`prisma.$transaction(async (tx) => {...})`** (interactive) when writes depend on prior reads or branching logic. Used in `StickersService.update` for drag-drop reorder: `updateMany` with `{order: {decrement/increment: 1}}` shifts siblings, then `update` moves the target. All siblings in one row-level lock scope.
 - Reorder strategy is **integer with reindex on shift**, not fractional. Gaps are allowed (DELETE doesn't close them). Migrate to LexoRank only when collaborative editing makes integer reindex painful.
 
-## Ownership Patterns
+## Authorization: Roles & BoardAccessService
 
-- Ownership lives in services, not controllers (so it works from gateways/CLI).
-- Sticker ownership chain: load with `select: {column: {select: {boardId: true, board: {select: {ownerId: true}}}}}` — single JOIN, minimal payload, type-safe.
-- Cross-board moves (e.g., sticker dragged to a column on a different board the user also owns) are explicitly rejected as `ForbiddenException` even though the user technically has access — semantic boundary, not just authz.
+All board authorization goes through `BoardAccessService` (`src/board-access/`) — never inline `ownerId` checks in feature services:
+
+- `getRole(boardId, userId): 'OWNER' | 'EDITOR' | 'VIEWER' | null` — single query (ownerId + filtered membership); throws 404 if the board doesn't exist. OWNER is synthesized from `Board.ownerId`.
+- `assertCanView` — any role (read board/columns/stickers, members list).
+- `assertCanEdit` — OWNER | EDITOR (create/update/delete columns and stickers).
+- `assertCanManage` — OWNER only (rename/delete board, manage members).
+- Asserts return the resolved role, so callers get `myRole` for free (used in board payloads).
+
+Other rules:
+- Authorization lives in services, not controllers (so it works from gateways/CLI).
+- Sticker/column services load only `boardId` via their FK chain, then delegate to `BoardAccessService`.
+- Cross-board sticker moves are rejected as `ForbiddenException` even when the user has access to both boards — semantic boundary in `StickersService`, not authz.
+- Adding members by email deliberately allows probing which emails are registered (404 vs 400/409) — accepted tradeoff (same as Trello), documented for interviews.
 
 ## Common Commands
 
@@ -173,42 +204,56 @@ npx prisma generate                       # regenerate client (always after sche
 npx prisma studio                        # visual DB browser
 npx prisma migrate reset                 # nuke and re-apply (dev only!)
 
-# Testing the API (requires curl + jq)
-TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+# Testing the API — auth is httpOnly-cookie based (access_token + refresh_token
+# cookies; login response body contains only the user object, NO accessToken)
+curl -s -c /tmp/jar -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"alice@example.com","password":"password123"}' | jq -r '.accessToken')
+  -d '{"email":"user@example.com","password":"password123"}'
 
-curl http://localhost:3000/boards -H "Authorization: Bearer $TOKEN"
+curl -s -b /tmp/jar http://localhost:3000/boards
 ```
 
 ## Current API Endpoints
 
 ```
 POST   /auth/register             - public
-POST   /auth/login                - public, returns { accessToken } + sets refresh cookie
-POST   /auth/refresh              - rotates refresh token, returns new accessToken
+POST   /auth/login                - public, sets access_token + refresh_token
+                                     httpOnly cookies; body = { user } only
+POST   /auth/refresh              - rotates refresh token, re-sets cookies
 POST   /auth/logout                - revokes refresh token
 
-GET    /boards                    - auth, only owner's boards (no relations)
-GET    /boards/:id                - auth, only owner's; returns board with columns
-                                     and their stickers, both sorted by `order` asc
+GET    /boards                    - auth, boards the user owns OR is a member of;
+                                     each item includes `myRole`
+GET    /boards/:id                - auth, any role; returns board with columns,
+                                     stickers (sorted by `order` asc) + `myRole`
 POST   /boards                    - auth, creates with current user as owner;
                                      atomically seeds 3 default columns
                                      (Went Well / To Improve / Action Items)
-PATCH  /boards/:id                - auth, only owner; partial update (title)
-DELETE /boards/:id                - auth, only owner
+PATCH  /boards/:id                - auth, OWNER only; partial update (title)
+DELETE /boards/:id                - auth, OWNER only
 
-POST   /columns                   - auth, only on owned boards
-GET    /columns/board/:boardId    - auth, only on owned boards (no stickers)
-PATCH  /columns/:id               - auth, only owner; partial update.
+GET    /boards/:boardId/members   - auth, any role; owner synthesized as first
+                                     entry ({role: OWNER}), then EDITOR/VIEWER rows
+POST   /boards/:boardId/members   - auth, OWNER only; body {email, role?};
+                                     404 unknown email, 400 owner's email,
+                                     409 already a member; default role EDITOR
+PATCH  /boards/:boardId/members/:userId - auth, OWNER only; body {role};
+                                     404 if not a member
+DELETE /boards/:boardId/members/:userId - auth, OWNER removes anyone;
+                                     a member may remove themself (self-leave);
+                                     403 removing the owner
+
+POST   /columns                   - auth, OWNER|EDITOR
+GET    /columns/board/:boardId    - auth, any role (no stickers)
+PATCH  /columns/:id               - auth, OWNER|EDITOR; partial update.
                                      If `order` changes → atomic reindex via $transaction
-DELETE /columns/:id               - auth, only owner; cascade-deletes its stickers
+DELETE /columns/:id               - auth, OWNER|EDITOR; cascade-deletes its stickers
 
-POST   /stickers                  - auth, only on owned boards
-PATCH  /stickers/:id              - auth, only owner; partial update.
+POST   /stickers                  - auth, OWNER|EDITOR
+PATCH  /stickers/:id              - auth, OWNER|EDITOR; partial update.
                                      If `order`/`columnId` change → atomic
                                      reindex via $transaction
-DELETE /stickers/:id              - auth, only owner; gaps in `order` are fine
+DELETE /stickers/:id              - auth, OWNER|EDITOR; gaps in `order` are fine
 ```
 
 ## What's NOT Built Yet
@@ -221,7 +266,9 @@ DELETE /stickers/:id              - auth, only owner; gaps in `order` are fine
 - Swagger/OpenAPI
 - Rate limiting (`@nestjs/throttler`)
 - Production deployment
-- Helper to dedupe ownership checks (currently repeated across BoardsService / ColumnsService / StickersService — extraction candidate)
+- Frontend for board members (backend done; FE panel/mutations/permission-gating are next)
+- Pending-invitation flow (current member add is immediate, existing users only)
+- Repo-wide prettier pass (~950 pre-existing `prettier/prettier` errors; config disagrees with de-facto 4-space/double-quote style)
 
 ## Working with This Codebase
 
