@@ -2,22 +2,24 @@ import {ForbiddenException, Injectable, NotFoundException} from '@nestjs/common'
 import {PrismaService} from "../prisma/prisma.service";
 import {Sticker} from "@prisma/client";
 import {CreateStickerDto, UpdateStickerDto} from "./dto";
+import {BoardAccessService} from "../board-access/board-access.service";
 
 @Injectable()
 export class StickersService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly boardAccess: BoardAccessService,
+    ) {}
 
     async create(dto: CreateStickerDto, requesterId: string): Promise<Sticker> {
         const column = await this.prisma.column.findUnique({
             where: {id: dto.columnId},
-            select: {board: {select: {ownerId: true}}},
+            select: {boardId: true},
         });
         if (!column) {
             throw new NotFoundException(`Column ${dto.columnId} not found`);
         }
-        if (column.board.ownerId !== requesterId) {
-            throw new ForbiddenException("You do not have access to this board");
-        }
+        await this.boardAccess.assertCanEdit(column.boardId, requesterId);
         const lastStickerInColumn = await this.prisma.sticker.findFirst({where: {columnId: dto.columnId}, orderBy: {order: "desc"}, select: {order: true}});
         const nextOrder = (lastStickerInColumn?.order ?? -1) + 1;
 
@@ -30,15 +32,13 @@ export class StickersService {
             select: {
                 columnId: true,
                 order: true,
-                column: {select: {boardId: true, board: {select: {ownerId: true}}}},
+                column: {select: {boardId: true}},
             },
         });
         if (!current) {
             throw new NotFoundException(`Sticker ${id} not found`);
         }
-        if (current.column.board.ownerId !== requesterId) {
-            throw new ForbiddenException("You do not have access to this board");
-        }
+        await this.boardAccess.assertCanEdit(current.column.boardId, requesterId);
 
         const newColumnId = dto.columnId ?? current.columnId;
         const newOrder = dto.order ?? current.order;
@@ -88,14 +88,12 @@ export class StickersService {
     async remove(id: string, requesterId: string): Promise<Sticker> {
         const sticker = await this.prisma.sticker.findUnique({
             where: {id},
-            select: {column: {select: {board: {select: {ownerId: true}}}}},
+            select: {column: {select: {boardId: true}}},
         });
         if (!sticker) {
             throw new NotFoundException(`Sticker ${id} not found`);
         }
-        if (sticker.column.board.ownerId !== requesterId) {
-            throw new ForbiddenException("You do not have access to this board");
-        }
+        await this.boardAccess.assertCanEdit(sticker.column.boardId, requesterId);
         return this.prisma.sticker.delete({where: {id}});
     }
 }

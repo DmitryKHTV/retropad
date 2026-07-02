@@ -1,23 +1,23 @@
-import {ForbiddenException, Injectable, NotFoundException} from '@nestjs/common';
+import {Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
 import {Column} from "@prisma/client";
 import {CreateColumnDto, UpdateColumnDto} from "./dto";
+import {BoardAccessService} from "../board-access/board-access.service";
 
 @Injectable()
 export class ColumnsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly boardAccess: BoardAccessService,
+    ) {}
 
     async findAllByBoard(boardId: string, requestedId: string): Promise<Column[]> {
-        const currentBoard = await this.prisma.board.findUnique({where: {id: boardId}});
-        if (!currentBoard) { throw new NotFoundException("No such board"); }
-        if (currentBoard.ownerId !== requestedId) { throw new ForbiddenException("You're not an owner of this board"); }
+        await this.boardAccess.assertCanView(boardId, requestedId);
         return this.prisma.column.findMany({where: {boardId}});
     }
 
     async create(dto: CreateColumnDto, requestedId: string): Promise<Column> {
-        const currentBoard = await this.prisma.board.findUnique({where: {id: dto.boardId}});
-        if (!currentBoard) { throw new NotFoundException("No such board"); }
-        if (currentBoard.ownerId !== requestedId) { throw new ForbiddenException("You're not an owner of this board"); }
+        await this.boardAccess.assertCanEdit(dto.boardId, requestedId);
         return this.prisma.column.create({data: dto});
     }
 
@@ -27,12 +27,11 @@ export class ColumnsService {
             select: {
                 order: true,
                 boardId: true,
-                board: {select: {ownerId: true}},
             },
         });
 
         if (!current) { throw new NotFoundException("No such column"); }
-        if (current.board.ownerId !== requesterId) { throw new ForbiddenException("You're not an owner of this board"); }
+        await this.boardAccess.assertCanEdit(current.boardId, requesterId);
 
         const newOrder = dto.order ?? current.order;
         const isMoving = newOrder !== current.order;
@@ -60,11 +59,11 @@ export class ColumnsService {
     async remove(columnId: string, requesterId: string): Promise<Column> {
         const current = await this.prisma.column.findUnique({
             where: {id: columnId},
-            select: {board: {select: {ownerId: true}}},
+            select: {boardId: true},
         });
 
         if (!current) { throw new NotFoundException("No such column"); }
-        if (current.board.ownerId !== requesterId) { throw new ForbiddenException("You're not an owner of this board"); }
+        await this.boardAccess.assertCanEdit(current.boardId, requesterId);
 
         return this.prisma.column.delete({where: {id: columnId}});
     }
