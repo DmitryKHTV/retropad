@@ -18,6 +18,7 @@ import {SortableColumn, useReorderColumn} from "@/features/column/reorder-column
 import {AddColumnButton} from "@/features/column/add-column";
 import {EditBoardTitle} from "@/features/board/edit-board";
 import {BoardColumn} from "@/widgets/board-column";
+import {BoardMembersPanel} from "@/widgets/board-members";
 
 interface BoardPageProps {
     id: string;
@@ -62,7 +63,10 @@ export const BoardPage = (props: BoardPageProps) => {
 
     return (
         <main className={cls.wrapper}>
-            <EditBoardTitle id={boardData.id} title={boardData.title} />
+            <div className={cls.header}>
+                <EditBoardTitle id={boardData.id} title={boardData.title} />
+                <BoardMembersPanel boardId={id} />
+            </div>
             <AddColumnButton boardId={id} order={columns.length} />
             <DndContext
                 sensors={sensors}
