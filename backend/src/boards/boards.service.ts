@@ -53,8 +53,10 @@ export class BoardsService {
         }));
     }
 
-    create(title: string, ownerId: string): Promise<Board> {
-        return this.prisma.board.create({
+    // Every board payload carries myRole; on create/update/remove the requester
+    // is always the owner (enforced by assertCanManage / creation itself)
+    async create(title: string, ownerId: string): Promise<BoardWithRole> {
+        const board = await this.prisma.board.create({
             data: {
                 title,
                 ownerId,
@@ -67,15 +69,18 @@ export class BoardsService {
                 },
             },
         });
+        return { ...board, myRole: 'OWNER' };
     }
 
-    async update(id: string, requesterId: string, dto: UpdateBoardDto): Promise<Board> {
+    async update(id: string, requesterId: string, dto: UpdateBoardDto): Promise<BoardWithRole> {
         await this.boardAccess.assertCanManage(id, requesterId);
-        return this.prisma.board.update({ where: { id }, data: dto });
+        const board = await this.prisma.board.update({ where: { id }, data: dto });
+        return { ...board, myRole: 'OWNER' };
     }
 
-    async remove(id: string, requesterId: string): Promise<Board> {
+    async remove(id: string, requesterId: string): Promise<BoardWithRole> {
         await this.boardAccess.assertCanManage(id, requesterId);
-        return this.prisma.board.delete({ where: { id } });
+        const board = await this.prisma.board.delete({ where: { id } });
+        return { ...board, myRole: 'OWNER' };
     }
 }

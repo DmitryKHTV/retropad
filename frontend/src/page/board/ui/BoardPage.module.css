@@ -5,6 +5,12 @@
     height: 100%;
     align-items: center;
 
+    .header{
+        display: flex;
+        align-items: center;
+        gap: var(--gaps-m);
+    }
+
     .content{
         text-align: center;
     }
