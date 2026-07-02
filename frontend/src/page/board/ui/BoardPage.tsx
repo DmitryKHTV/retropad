@@ -65,7 +65,7 @@ export const BoardPage = (props: BoardPageProps) => {
         <main className={cls.wrapper}>
             <div className={cls.header}>
                 <EditBoardTitle id={boardData.id} title={boardData.title} />
-                <BoardMembersPanel boardId={id} />
+                <BoardMembersPanel boardId={id} myRole={boardData.myRole} />
             </div>
             <AddColumnButton boardId={id} order={columns.length} />
             <DndContext

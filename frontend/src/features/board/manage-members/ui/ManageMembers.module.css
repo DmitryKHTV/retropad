@@ -1,0 +1,50 @@
+.addForm {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-s);
+    padding-top: var(--padding-m);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.addRow {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-s);
+}
+
+.addRow > input {
+    flex: 1;
+    min-width: 0;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-s);
+    flex-shrink: 0;
+}
+
+.roleSelect {
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--surface-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--border-radius-s);
+    cursor: pointer;
+}
+
+.roleSelect:hover:not(:disabled) {
+    border-color: var(--border-focus);
+}
+
+.roleSelect:disabled {
+    color: var(--text-disabled);
+    cursor: default;
+}
+
+.error {
+    font-size: 12px;
+    color: var(--accent-danger-fg);
+}
