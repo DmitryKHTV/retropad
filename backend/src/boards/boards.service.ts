@@ -1,7 +1,8 @@
-import {ForbiddenException, Injectable, NotFoundException} from '@nestjs/common';
+import {Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
 import { Board, Prisma } from '@prisma/client';
 import {UpdateBoardDto} from "./dto";
+import {BoardAccessService} from "../board-access/board-access.service";
 
 export type BoardWithColumns = Prisma.BoardGetPayload<{
     include: {
@@ -14,7 +15,10 @@ export type BoardWithColumns = Prisma.BoardGetPayload<{
 
 @Injectable()
 export class BoardsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly boardAccess: BoardAccessService,
+    ) {}
 
     findAll(): Promise<Board[]> {
         return this.prisma.board.findMany({
@@ -35,9 +39,7 @@ export class BoardsService {
         if (!board) {
             throw new NotFoundException(`Board with id ${id} not found`);
         }
-        if (board.ownerId !== requesterId) {
-            throw new ForbiddenException('You do not have access to this board');
-        }
+        await this.boardAccess.assertCanView(id, requesterId);
         return board;
     }
 
@@ -65,30 +67,12 @@ export class BoardsService {
     }
 
     async update(id: string, requesterId: string, dto: UpdateBoardDto): Promise<Board> {
-        const board = await this.prisma.board.findUnique({ where: { id } });
-
-        if (!board) {
-            throw new NotFoundException(`Board with id ${id} not found`);
-        }
-
-        if (board.ownerId !== requesterId) {
-            throw new ForbiddenException('You do not have access to this board');
-        }
-
+        await this.boardAccess.assertCanManage(id, requesterId);
         return this.prisma.board.update({ where: { id }, data: dto });
     }
 
     async remove(id: string, requesterId: string): Promise<Board> {
-        const board = await this.prisma.board.findUnique({ where: { id } });
-
-        if (!board) {
-            throw new NotFoundException(`Board with id ${id} not found`);
-        }
-
-        if (board.ownerId !== requesterId) {
-            throw new ForbiddenException('You do not have access to this board');
-        }
-
+        await this.boardAccess.assertCanManage(id, requesterId);
         return this.prisma.board.delete({ where: { id } });
     }
 }

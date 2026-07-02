@@ -16,7 +16,27 @@ model Board {
   owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   columns   Column[]
+  members   BoardMember[]
   @@index([ownerId])
+}
+
+// OWNER is never stored here — it is synthesized from Board.ownerId (single source of truth)
+enum BoardRole {
+  EDITOR
+  VIEWER
+}
+
+model BoardMember {
+  boardId   String
+  userId    String
+  role      BoardRole @default(EDITOR)
+  createdAt DateTime  @default(now())
+
+  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, userId])
+  @@index([userId])
 }
 
 model Column {
@@ -56,6 +76,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   boards        Board[]
+  memberships   BoardMember[]
   refreshTokens RefreshToken[]
 }
 

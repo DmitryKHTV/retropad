@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { BoardsController } from './boards.controller';
 import { BoardsService } from './boards.service';
+import { BoardAccessModule } from '../board-access/board-access.module';
 
 @Module({
+  imports: [BoardAccessModule],
   controllers: [BoardsController],
   providers: [BoardsService]
 })
