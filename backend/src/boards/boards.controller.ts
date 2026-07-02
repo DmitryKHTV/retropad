@@ -11,7 +11,7 @@ export class BoardsController {
 
     @Get()
     findAll(@CurrentUser() user: SafeUser) {
-        return this.boardsService.findAllByOwner(user.id);
+        return this.boardsService.findAllForViewer(user.id);
     }
 
     @Get(':id')

@@ -2,7 +2,7 @@ import {Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
 import { Board, Prisma } from '@prisma/client';
 import {UpdateBoardDto} from "./dto";
-import {BoardAccessService} from "../board-access/board-access.service";
+import {BoardAccessService, type EffectiveRole} from "../board-access/board-access.service";
 
 export type BoardWithColumns = Prisma.BoardGetPayload<{
     include: {
@@ -13,6 +13,9 @@ export type BoardWithColumns = Prisma.BoardGetPayload<{
     };
 }>;
 
+export type BoardWithRole = Board & {myRole: EffectiveRole};
+export type BoardWithColumnsAndRole = BoardWithColumns & {myRole: EffectiveRole};
+
 @Injectable()
 export class BoardsService {
     constructor(
@@ -20,13 +23,7 @@ export class BoardsService {
         private readonly boardAccess: BoardAccessService,
     ) {}
 
-    findAll(): Promise<Board[]> {
-        return this.prisma.board.findMany({
-            orderBy: { createdAt: 'desc' },
-        });
-    }
-
-    async findOne(id: string, requesterId: string): Promise<BoardWithColumns> {
+    async findOne(id: string, requesterId: string): Promise<BoardWithColumnsAndRole> {
         const board = await this.prisma.board.findUnique({
             where: { id },
             include: {
@@ -39,15 +36,21 @@ export class BoardsService {
         if (!board) {
             throw new NotFoundException(`Board with id ${id} not found`);
         }
-        await this.boardAccess.assertCanView(id, requesterId);
-        return board;
+        const myRole = await this.boardAccess.assertCanView(id, requesterId);
+        return { ...board, myRole };
     }
 
-    findAllByOwner(ownerId: string): Promise<Board[]> {
-        return this.prisma.board.findMany({
-            where: { ownerId },
+    // Boards the user owns OR is a member of, each annotated with the user's role
+    async findAllForViewer(userId: string): Promise<BoardWithRole[]> {
+        const boards = await this.prisma.board.findMany({
+            where: { OR: [{ ownerId: userId }, { members: { some: { userId } } }] },
             orderBy: { createdAt: 'desc' },
+            include: { members: { where: { userId }, select: { role: true } } },
         });
+        return boards.map(({ members, ...board }) => ({
+            ...board,
+            myRole: board.ownerId === userId ? 'OWNER' : (members[0]?.role ?? 'VIEWER'),
+        }));
     }
 
     create(title: string, ownerId: string): Promise<Board> {
