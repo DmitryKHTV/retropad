@@ -1,0 +1,73 @@
+.row {
+    display: flex;
+    align-items: center;
+    gap: var(--gaps-m);
+    padding: var(--padding-m);
+    border-radius: var(--border-radius-m);
+}
+
+.row:hover {
+    background: var(--surface-btn-soft);
+}
+
+.avatar {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border-card);
+    background: linear-gradient(180deg, var(--surface-raised-top), var(--surface-raised-bottom));
+    box-shadow: inset 0 1px 0 var(--highlight-edge);
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-body);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.email {
+    font-size: 11px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.role {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    padding: 2px 8px;
+    border-radius: var(--border-radius-l);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+}
+
+.owner {
+    color: var(--accent-edit-fg);
+    background: var(--accent-edit-bg);
+    border-color: var(--accent-edit-border);
+}
+
+.editor {
+    color: var(--accent-success-fg);
+    background: var(--accent-success-bg-soft);
+    border-color: var(--accent-success-border);
+}
