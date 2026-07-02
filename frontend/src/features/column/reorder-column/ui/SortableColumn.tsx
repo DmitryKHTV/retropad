@@ -8,10 +8,11 @@ import cls from './SortableColumn.module.css';
 interface SortableColumnProps {
     id: string;
     children: ReactNode;
+    disabled?: boolean;
 }
 
-export const SortableColumn = ({ id, children }: SortableColumnProps) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+export const SortableColumn = ({ id, children, disabled = false }: SortableColumnProps) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
 
     const style = {
         transform: CSS.Transform.toString(transform),

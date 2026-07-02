@@ -10,20 +10,23 @@ import {DeleteStickerButton} from "@/features/sticker/delete-sticker";
 
 interface BoardColumnProps {
     column: ColumnWithStickers;
+    canEdit?: boolean;
 }
 
-export const BoardColumn = ({column}: BoardColumnProps) => {
+// Without canEdit all slots stay empty and the entity cards fall back
+// to their plain read-only rendering.
+export const BoardColumn = ({column, canEdit = true}: BoardColumnProps) => {
     return (
         <ColumnCard
             {...column}
-            titleSlot={
+            titleSlot={canEdit ? (
                 <>
                     <EditColumnTitle id={column.id} boardId={column.boardId} title={column.title} />
                     <DeleteColumnButton boardId={column.boardId} columnId={column.id} />
                 </>
-            }
-            actions={<AddStickerButton columnId={column.id} boardId={column.boardId} />}
-            renderSticker={(sticker) => (
+            ) : undefined}
+            actions={canEdit ? <AddStickerButton columnId={column.id} boardId={column.boardId} /> : undefined}
+            renderSticker={canEdit ? (sticker) => (
                 <StickerCard
                     content={sticker.content}
                     contentSlot={
@@ -31,7 +34,7 @@ export const BoardColumn = ({column}: BoardColumnProps) => {
                     }
                     actions={<DeleteStickerButton boardId={column.boardId} stickerId={sticker.id} />}
                 />
-            )}
+            ) : undefined}
         />
     );
 };

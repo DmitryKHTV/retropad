@@ -37,6 +37,8 @@ export const BoardPage = (props: BoardPageProps) => {
 
     if (!boardData) return null;
 
+    const isOwner = boardData.myRole === 'OWNER';
+    const canEdit = boardData.myRole !== 'VIEWER';
     const columns = boardData.columns;
     const columnIds = columns.map((c) => c.id);
     const activeColumn = columns.find((c) => c.id === activeId) ?? null;
@@ -64,10 +66,12 @@ export const BoardPage = (props: BoardPageProps) => {
     return (
         <main className={cls.wrapper}>
             <div className={cls.header}>
-                <EditBoardTitle id={boardData.id} title={boardData.title} />
+                {isOwner
+                    ? <EditBoardTitle id={boardData.id} title={boardData.title} />
+                    : <h1 className={cls.plainTitle}>{boardData.title}</h1>}
                 <BoardMembersPanel boardId={id} myRole={boardData.myRole} />
             </div>
-            <AddColumnButton boardId={id} order={columns.length} />
+            {canEdit && <AddColumnButton boardId={id} order={columns.length} />}
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -78,14 +82,14 @@ export const BoardPage = (props: BoardPageProps) => {
                 <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
                     <div className={cls.columnsWrapper}>
                         {columns.map((column) => (
-                            <SortableColumn key={`column-${column.id}`} id={column.id}>
-                                <BoardColumn column={column} />
+                            <SortableColumn key={`column-${column.id}`} id={column.id} disabled={!canEdit}>
+                                <BoardColumn column={column} canEdit={canEdit} />
                             </SortableColumn>
                         ))}
                     </div>
                 </SortableContext>
                 <DragOverlay dropAnimation={null}>
-                    {activeColumn ? <BoardColumn column={activeColumn} /> : null}
+                    {activeColumn ? <BoardColumn column={activeColumn} canEdit={canEdit} /> : null}
                 </DragOverlay>
             </DndContext>
         </main>

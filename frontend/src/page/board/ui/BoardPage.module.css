@@ -11,6 +11,11 @@
         gap: var(--gaps-m);
     }
 
+    .plainTitle{
+        margin: 0;
+        text-align: center;
+    }
+
     .content{
         text-align: center;
     }
