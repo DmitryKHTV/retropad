@@ -15,7 +15,7 @@ export const AddMemberForm = ({boardId}: AddMemberFormProps) => {
     const [role, setRole] = useState<BoardRole>("EDITOR");
     const {mutate: addMember, isPending, error, reset} = useAddMember();
 
-    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const onSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!email) return;
         addMember({boardId, email, role}, {onSuccess: () => setEmail("")});
