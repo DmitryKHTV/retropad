@@ -64,7 +64,11 @@ model Sticker {
   columnId  String
   column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
 
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
   @@index([columnId])
+  @@index([authorId])
 }
 
 model User {
@@ -78,6 +82,7 @@ model User {
   boards        Board[]
   memberships   BoardMember[]
   refreshTokens RefreshToken[]
+  stickers      Sticker[]
 }
 
 model RefreshToken {
