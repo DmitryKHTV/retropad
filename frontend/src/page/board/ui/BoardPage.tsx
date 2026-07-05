@@ -19,6 +19,8 @@ import {AddColumnButton} from "@/features/column/add-column";
 import {EditBoardTitle} from "@/features/board/edit-board";
 import {BoardColumn} from "@/widgets/board-column";
 import {BoardMembersPanel} from "@/widgets/board-members";
+import {useMe} from "@/entities/user";
+import {canManageBoard} from "@/shared/lib/permissions";
 
 interface BoardPageProps {
     id: string;
@@ -27,6 +29,7 @@ interface BoardPageProps {
 export const BoardPage = (props: BoardPageProps) => {
     const {id} = props;
     const {data: boardData} = useBoard(id);
+    const {data: me} = useMe();
     const reorderMutation = useReorderColumn();
 
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -35,10 +38,9 @@ export const BoardPage = (props: BoardPageProps) => {
         useSensor(PointerSensor, {activationConstraint: {distance: 5}}),
     );
 
-    if (!boardData) return null;
+    if (!boardData || !me) return null;
 
-    const isOwner = boardData.myRole === 'OWNER';
-    const canEdit = boardData.myRole !== 'VIEWER';
+    const isOwner = canManageBoard(boardData.myRole);
     const columns = boardData.columns;
     const columnIds = columns.map((c) => c.id);
     const activeColumn = columns.find((c) => c.id === activeId) ?? null;
@@ -71,7 +73,7 @@ export const BoardPage = (props: BoardPageProps) => {
                     : <h1 className={cls.plainTitle}>{boardData.title}</h1>}
                 <BoardMembersPanel boardId={id} myRole={boardData.myRole} />
             </div>
-            {canEdit && <AddColumnButton boardId={id} order={columns.length} />}
+            {isOwner && <AddColumnButton boardId={id} order={columns.length} />}
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -82,14 +84,14 @@ export const BoardPage = (props: BoardPageProps) => {
                 <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
                     <div className={cls.columnsWrapper}>
                         {columns.map((column) => (
-                            <SortableColumn key={`column-${column.id}`} id={column.id} disabled={!canEdit}>
-                                <BoardColumn column={column} canEdit={canEdit} />
+                            <SortableColumn key={`column-${column.id}`} id={column.id} disabled={!isOwner}>
+                                <BoardColumn column={column} myRole={boardData.myRole} userId={me.id} />
                             </SortableColumn>
                         ))}
                     </div>
                 </SortableContext>
                 <DragOverlay dropAnimation={null}>
-                    {activeColumn ? <BoardColumn column={activeColumn} canEdit={canEdit} /> : null}
+                    {activeColumn ? <BoardColumn column={activeColumn} myRole={boardData.myRole} userId={me.id} /> : null}
                 </DragOverlay>
             </DndContext>
         </main>

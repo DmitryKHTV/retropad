@@ -1,25 +1,29 @@
 'use client'
 
 import {ColumnCard, type ColumnWithStickers} from "@/entities/column";
-import {StickerCard} from "@/entities/sticker";
 import {EditColumnTitle} from "@/features/column/edit-column";
 import {DeleteColumnButton} from "@/features/column/delete-column";
 import {AddStickerButton} from "@/features/sticker/add-sticker";
-import {EditStickerCard} from "@/features/sticker/edit-sticker";
-import {DeleteStickerButton} from "@/features/sticker/delete-sticker";
+import {ColumnSticker} from "@/widgets/column-sticker";
+import {canEditBoard, canManageBoard} from "@/shared/lib/permissions";
+import type {EffectiveRole} from "@/shared/api";
 
 interface BoardColumnProps {
     column: ColumnWithStickers;
-    canEdit?: boolean;
+    myRole: EffectiveRole;
+    userId: string;
 }
 
-// Without canEdit all slots stay empty and the entity cards fall back
-// to their plain read-only rendering.
-export const BoardColumn = ({column, canEdit = true}: BoardColumnProps) => {
+// Empty slots make the entity cards fall back to their plain read-only
+// rendering. Column structure (rename/delete) is OWNER-only; sticker slots
+// go to anyone who can edit, with per-sticker gating inside ColumnSticker.
+export const BoardColumn = ({column, myRole, userId}: BoardColumnProps) => {
+    const canEdit = canEditBoard(myRole);
+    const isOwner = canManageBoard(myRole);
     return (
         <ColumnCard
             {...column}
-            titleSlot={canEdit ? (
+            titleSlot={isOwner ? (
                 <>
                     <EditColumnTitle id={column.id} boardId={column.boardId} title={column.title} />
                     <DeleteColumnButton boardId={column.boardId} columnId={column.id} />
@@ -27,13 +31,7 @@ export const BoardColumn = ({column, canEdit = true}: BoardColumnProps) => {
             ) : undefined}
             actions={canEdit ? <AddStickerButton columnId={column.id} boardId={column.boardId} /> : undefined}
             renderSticker={canEdit ? (sticker) => (
-                <StickerCard
-                    content={sticker.content}
-                    contentSlot={
-                        <EditStickerCard id={sticker.id} boardId={column.boardId} content={sticker.content} />
-                    }
-                    actions={<DeleteStickerButton boardId={column.boardId} stickerId={sticker.id} />}
-                />
+                <ColumnSticker boardId={column.boardId} sticker={sticker} myRole={myRole} userId={userId} />
             ) : undefined}
         />
     );
