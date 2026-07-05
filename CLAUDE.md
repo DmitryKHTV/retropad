@@ -83,6 +83,7 @@ model User {
   updatedAt    DateTime @updatedAt
   boards       Board[]
   memberships  BoardMember[]
+  stickers     Sticker[]
 }
 
 model Board {
@@ -133,13 +134,16 @@ model Sticker {
   order     Int
   columnId  String
   column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([columnId])
+  @@index([authorId])
 }
 ```
 
-Hierarchy: `Board → Column → Sticker`. Stickers do NOT have a direct FK to Board — ownership chain goes through `Column.board.ownerId`. No `(columnId, order)` unique constraint — transient duplicates are valid mid-transaction during reorder.
+Hierarchy: `Board → Column → Sticker`. Stickers do NOT have a direct FK to Board — ownership chain goes through `Column.board.ownerId`. `Sticker.authorId` is the creating user (pre-existing rows were backfilled with the board owner in the `sticker_author` migration); deleting a user cascade-deletes their stickers even on other people's boards — consciously consistent with the rest of the schema. No `(columnId, order)` unique constraint — transient duplicates are valid mid-transaction during reorder.
 
 **Always**: index foreign keys you filter on. Postgres doesn't auto-index FKs.
 
@@ -183,6 +187,7 @@ All board authorization goes through `BoardAccessService` (`src/board-access/`) 
 - `assertCanView` — any role (read board/columns/stickers, members list).
 - `assertCanEdit` — OWNER | EDITOR (create/update/delete columns and stickers).
 - `assertCanManage` — OWNER only (rename/delete board, manage members).
+- `assertCanTouchSticker(boardId, userId, authorId)` — per-sticker rule on top of `assertCanEdit`: EDITOR may update/move/delete only stickers they authored; OWNER moderates all. Used by `StickersService.update/remove`.
 - Asserts return the resolved role, so callers get `myRole` for free (used in board payloads).
 
 Other rules:
@@ -225,7 +230,8 @@ POST   /auth/logout                - revokes refresh token
 GET    /boards                    - auth, boards the user owns OR is a member of;
                                      each item includes `myRole`
 GET    /boards/:id                - auth, any role; returns board with columns,
-                                     stickers (sorted by `order` asc) + `myRole`
+                                     stickers (sorted by `order` asc, each with
+                                     author {id,name,email}) + `myRole`
 POST   /boards                    - auth, creates with current user as owner;
                                      atomically seeds 3 default columns
                                      (Went Well / To Improve / Action Items)
@@ -249,11 +255,13 @@ PATCH  /columns/:id               - auth, OWNER|EDITOR; partial update.
                                      If `order` changes → atomic reindex via $transaction
 DELETE /columns/:id               - auth, OWNER|EDITOR; cascade-deletes its stickers
 
-POST   /stickers                  - auth, OWNER|EDITOR
-PATCH  /stickers/:id              - auth, OWNER|EDITOR; partial update.
-                                     If `order`/`columnId` change → atomic
-                                     reindex via $transaction
-DELETE /stickers/:id              - auth, OWNER|EDITOR; gaps in `order` are fine
+POST   /stickers                  - auth, OWNER|EDITOR; requester becomes author
+PATCH  /stickers/:id              - auth, OWNER any sticker, EDITOR only own
+                                     (403 otherwise); partial update. If `order`/
+                                     `columnId` change → atomic reindex via
+                                     $transaction
+DELETE /stickers/:id              - auth, OWNER any sticker, EDITOR only own;
+                                     gaps in `order` are fine
 ```
 
 ## What's NOT Built Yet
@@ -266,7 +274,8 @@ DELETE /stickers/:id              - auth, OWNER|EDITOR; gaps in `order` are fine
 - Swagger/OpenAPI
 - Rate limiting (`@nestjs/throttler`)
 - Production deployment
-- Frontend for board members (backend done; FE panel/mutations/permission-gating are next)
+- Frontend for sticker authorship (backend done; FE: show author on sticker, hide
+  edit/delete + disable drag on others' stickers for EDITOR)
 - Pending-invitation flow (current member add is immediate, existing users only)
 - Repo-wide prettier pass (~950 pre-existing `prettier/prettier` errors; config disagrees with de-facto 4-space/double-quote style)
 

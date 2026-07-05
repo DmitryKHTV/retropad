@@ -28,7 +28,7 @@ export class BoardsService {
             where: { id },
             include: {
                 columns: {
-                    include: {stickers: {orderBy: {order: 'asc'}}},
+                    include: {stickers: {orderBy: {order: 'asc'}, include: {author: {select: {id: true, name: true, email: true}}}}},
                     orderBy: {order: 'asc'},
                 },
             },
