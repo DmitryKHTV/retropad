@@ -55,4 +55,12 @@ export class BoardAccessService {
             throw new ForbiddenException('Only the board owner can perform this action');
         }
     }
+
+    /** OWNER moderates any sticker; EDITOR may only touch their own. */
+    async assertCanTouchSticker(boardId: string, userId: string, authorId: string): Promise<void> {
+        const role = await this.assertCanEdit(boardId, userId);
+        if (role === BoardRole.EDITOR && authorId !== userId) {
+            throw new ForbiddenException("You don't own this sticker");
+        }
+    }
 }

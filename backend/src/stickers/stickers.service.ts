@@ -1,6 +1,6 @@
 import {ForbiddenException, Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
-import {Sticker} from "@prisma/client";
+import {BoardRole, Sticker} from "@prisma/client";
 import {CreateStickerDto, UpdateStickerDto} from "./dto";
 import {BoardAccessService} from "../board-access/board-access.service";
 
@@ -23,7 +23,7 @@ export class StickersService {
         const lastStickerInColumn = await this.prisma.sticker.findFirst({where: {columnId: dto.columnId}, orderBy: {order: "desc"}, select: {order: true}});
         const nextOrder = (lastStickerInColumn?.order ?? -1) + 1;
 
-        return this.prisma.sticker.create({data: {...dto, order: nextOrder}});
+        return this.prisma.sticker.create({data: {...dto, order: nextOrder, authorId: requesterId}});
     }
 
     async update(id: string, dto: UpdateStickerDto, requesterId: string): Promise<Sticker> {
@@ -33,12 +33,14 @@ export class StickersService {
                 columnId: true,
                 order: true,
                 column: {select: {boardId: true}},
+                authorId: true
             },
         });
         if (!current) {
             throw new NotFoundException(`Sticker ${id} not found`);
         }
-        await this.boardAccess.assertCanEdit(current.column.boardId, requesterId);
+
+        await this.boardAccess.assertCanTouchSticker(current.column.boardId, requesterId, current.authorId);
 
         const newColumnId = dto.columnId ?? current.columnId;
         const newOrder = dto.order ?? current.order;
@@ -88,12 +90,12 @@ export class StickersService {
     async remove(id: string, requesterId: string): Promise<Sticker> {
         const sticker = await this.prisma.sticker.findUnique({
             where: {id},
-            select: {column: {select: {boardId: true}}},
+            select: {column: {select: {boardId: true}}, authorId: true},
         });
         if (!sticker) {
             throw new NotFoundException(`Sticker ${id} not found`);
         }
-        await this.boardAccess.assertCanEdit(sticker.column.boardId, requesterId);
+        await this.boardAccess.assertCanTouchSticker(sticker.column.boardId, requesterId, sticker.authorId);
         return this.prisma.sticker.delete({where: {id}});
     }
 }
