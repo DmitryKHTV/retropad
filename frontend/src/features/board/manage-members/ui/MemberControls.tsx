@@ -11,7 +11,6 @@ interface MemberControlsProps {
     role: BoardRole;
 }
 
-// Owner-side controls for a single member row: role select + remove
 export const MemberControls = ({boardId, userId, role}: MemberControlsProps) => {
     const changeRole = useChangeMemberRole();
     const removeMember = useRemoveMember();
