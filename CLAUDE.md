@@ -185,8 +185,10 @@ All board authorization goes through `BoardAccessService` (`src/board-access/`) 
 
 - `getRole(boardId, userId): 'OWNER' | 'EDITOR' | 'VIEWER' | null` — single query (ownerId + filtered membership); throws 404 if the board doesn't exist. OWNER is synthesized from `Board.ownerId`.
 - `assertCanView` — any role (read board/columns/stickers, members list).
-- `assertCanEdit` — OWNER | EDITOR (create/update/delete columns and stickers).
-- `assertCanManage` — OWNER only (rename/delete board, manage members).
+- `assertCanEdit` — OWNER | EDITOR (create/update/delete stickers).
+- `assertCanManage` — OWNER only (rename/delete board, manage members, ALL column
+  mutations — columns are board structure; EDITOR deleting a column would
+  cascade-delete other people's stickers, bypassing the sticker-author rule).
 - `assertCanTouchSticker(boardId, userId, authorId)` — per-sticker rule on top of `assertCanEdit`: EDITOR may update/move/delete only stickers they authored; OWNER moderates all. Used by `StickersService.update/remove`.
 - Asserts return the resolved role, so callers get `myRole` for free (used in board payloads).
 
@@ -249,11 +251,11 @@ DELETE /boards/:boardId/members/:userId - auth, OWNER removes anyone;
                                      a member may remove themself (self-leave);
                                      403 removing the owner
 
-POST   /columns                   - auth, OWNER|EDITOR
+POST   /columns                   - auth, OWNER only
 GET    /columns/board/:boardId    - auth, any role (no stickers)
-PATCH  /columns/:id               - auth, OWNER|EDITOR; partial update.
+PATCH  /columns/:id               - auth, OWNER only; partial update.
                                      If `order` changes → atomic reindex via $transaction
-DELETE /columns/:id               - auth, OWNER|EDITOR; cascade-deletes its stickers
+DELETE /columns/:id               - auth, OWNER only; cascade-deletes its stickers
 
 POST   /stickers                  - auth, OWNER|EDITOR; requester becomes author
 PATCH  /stickers/:id              - auth, OWNER any sticker, EDITOR only own

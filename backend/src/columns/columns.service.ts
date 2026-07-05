@@ -16,8 +16,11 @@ export class ColumnsService {
         return this.prisma.column.findMany({where: {boardId}});
     }
 
+    // Columns are board structure, so all mutations are OWNER-only. Letting
+    // EDITOR delete a column would cascade-delete other people's stickers,
+    // bypassing the "EDITOR touches only own stickers" rule.
     async create(dto: CreateColumnDto, requestedId: string): Promise<Column> {
-        await this.boardAccess.assertCanEdit(dto.boardId, requestedId);
+        await this.boardAccess.assertCanManage(dto.boardId, requestedId);
         return this.prisma.column.create({data: dto});
     }
 
@@ -31,7 +34,7 @@ export class ColumnsService {
         });
 
         if (!current) { throw new NotFoundException("No such column"); }
-        await this.boardAccess.assertCanEdit(current.boardId, requesterId);
+        await this.boardAccess.assertCanManage(current.boardId, requesterId);
 
         const newOrder = dto.order ?? current.order;
         const isMoving = newOrder !== current.order;
@@ -63,7 +66,7 @@ export class ColumnsService {
         });
 
         if (!current) { throw new NotFoundException("No such column"); }
-        await this.boardAccess.assertCanEdit(current.boardId, requesterId);
+        await this.boardAccess.assertCanManage(current.boardId, requesterId);
 
         return this.prisma.column.delete({where: {id: columnId}});
     }
