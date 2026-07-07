@@ -276,8 +276,6 @@ DELETE /stickers/:id              - auth, OWNER any sticker, EDITOR only own;
 - Swagger/OpenAPI
 - Rate limiting (`@nestjs/throttler`)
 - Production deployment
-- Frontend for sticker authorship (backend done; FE: show author on sticker, hide
-  edit/delete + disable drag on others' stickers for EDITOR)
 - Pending-invitation flow (current member add is immediate, existing users only)
 - Repo-wide prettier pass (~950 pre-existing `prettier/prettier` errors; config disagrees with de-facto 4-space/double-quote style)
 

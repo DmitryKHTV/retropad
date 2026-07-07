@@ -1,6 +1,6 @@
 import {type ReactNode} from "react";
 import classNames from "classnames";
-import {getInitials} from "@/shared/lib/get-initials";
+import {Avatar} from "@/shared/ui";
 import type {BoardMember} from "../model/types";
 import cls from "./MemberRow.module.css";
 
@@ -13,7 +13,7 @@ export const MemberRow = (props: MemberRowProps) => {
 
     return (
         <div className={cls.row}>
-            <span className={cls.avatar}>{getInitials(user)}</span>
+            <Avatar user={user}/>
             <div className={cls.info}>
                 <span className={cls.name}>{user.name ?? user.email}</span>
                 {user.name && <span className={cls.email}>{user.email}</span>}
