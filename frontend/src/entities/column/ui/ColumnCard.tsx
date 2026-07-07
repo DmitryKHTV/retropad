@@ -26,7 +26,7 @@ export const ColumnCard = (props: ColumnCardProps) => {
                         <Fragment key={`sticker-${sticker.id}`}>
                             {renderSticker
                                 ? renderSticker(sticker)
-                                : <StickerCard content={sticker.content} />}
+                                : <StickerCard content={sticker.content} author={sticker.author} />}
                         </Fragment>
                     ))
                     : <p className={cls.noStickersText}>No stickers yet</p>}
