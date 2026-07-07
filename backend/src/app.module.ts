@@ -10,12 +10,13 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import {ColumnsModule} from "./columns/columns.module";
 import {MembersModule} from "./members/members.module";
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv
-  }), BoardsModule, PrismaModule, StickersModule, AuthModule, UsersModule, ColumnsModule, MembersModule],
+  }), BoardsModule, PrismaModule, StickersModule, AuthModule, UsersModule, ColumnsModule, MembersModule, RealtimeModule],
   controllers: [AppController],
   providers: [AppService],
 })
