@@ -1,9 +1,9 @@
 .wrapper{
     padding: var(--padding-m);
     display: flex;
+    flex-direction: column;
     flex: 1;
-    align-items: center;
-    gap: var(--gaps-m);
+    gap: var(--gap-s);
     min-width: 0;
 
     background: var(--surface-card);
@@ -16,10 +16,32 @@
         border-color: var(--border-card-hover);
     }
 
+    .body{
+        display: flex;
+        align-items: center;
+        gap: var(--gaps-m);
+        min-width: 0;
+    }
+
     .content{
         flex: 1;
         min-width: 0;
         overflow-wrap: anywhere;
         color: var(--text-body);
+    }
+
+    .author{
+        display: flex;
+        align-items: center;
+        gap: var(--gaps-m);
+        min-width: 0;
+    }
+
+    .authorName{
+        font-size: 11px;
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 }

@@ -17,6 +17,7 @@ export const ColumnSticker = ({sticker, boardId, myRole, userId}: ColumnStickerP
     return (
         <StickerCard
             content={sticker.content}
+            author={sticker.author}
             contentSlot={
                 canTouch ? <EditStickerCard id={sticker.id} boardId={boardId} content={sticker.content} /> : undefined
             }

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import classNames from 'classnames';
 import {useMe} from '@/entities/user/api';
-import {getInitials} from '@/shared/lib/get-initials';
+import {Avatar} from '@/shared/ui';
 import IconGrid from '@/shared/assets/icons/icon-grid.svg';
 import cls from './Navbar.module.css';
 
@@ -45,8 +45,8 @@ export const Navbar = () => {
 
             <div className={cls.spacer}/>
 
-            <Link href="/profile" title="Profile" className={cls.avatar}>
-                {getInitials(user)}
+            <Link href="/profile" title="Profile" className={cls.avatarLink}>
+                <Avatar user={user} size="l" className={cls.avatar}/>
             </Link>
         </nav>
     );
