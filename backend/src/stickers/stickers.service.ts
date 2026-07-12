@@ -1,14 +1,17 @@
 import {ForbiddenException, Injectable, NotFoundException} from '@nestjs/common';
 import {PrismaService} from "../prisma/prisma.service";
-import {BoardRole, Sticker} from "@prisma/client";
+import {Sticker} from "@prisma/client";
 import {CreateStickerDto, UpdateStickerDto} from "./dto";
 import {BoardAccessService} from "../board-access/board-access.service";
+import {EventEmitter2} from "@nestjs/event-emitter";
+import {BOARD_CHANGED, BoardChangedEvent} from "../realtime/events";
 
 @Injectable()
 export class StickersService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly boardAccess: BoardAccessService,
+        private readonly eventEmitter: EventEmitter2
     ) {}
 
     async create(dto: CreateStickerDto, requesterId: string): Promise<Sticker> {
@@ -22,8 +25,10 @@ export class StickersService {
         await this.boardAccess.assertCanEdit(column.boardId, requesterId);
         const lastStickerInColumn = await this.prisma.sticker.findFirst({where: {columnId: dto.columnId}, orderBy: {order: "desc"}, select: {order: true}});
         const nextOrder = (lastStickerInColumn?.order ?? -1) + 1;
-
-        return this.prisma.sticker.create({data: {...dto, order: nextOrder, authorId: requesterId}});
+        const newSticker = await this.prisma.sticker.create({data: {...dto, order: nextOrder, authorId: requesterId}});
+        const event: BoardChangedEvent = {boardId: column.boardId};
+        this.eventEmitter.emit(BOARD_CHANGED, event);
+        return newSticker;
     }
 
     async update(id: string, dto: UpdateStickerDto, requesterId: string): Promise<Sticker> {
