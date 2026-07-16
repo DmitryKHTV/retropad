@@ -3,6 +3,7 @@ import {BoardsService} from "./boards.service";
 import {CreateBoardDto, FindBoardParamsDto, UpdateBoardDto} from "./dto";
 import {JwtAuthGuard} from "../auth/guards";
 import {CurrentUser, type SafeUser} from "../auth/decorators";
+import {SocketId} from "../realtime/socket-id.decorator";
 
 @UseGuards(JwtAuthGuard)
 @Controller('boards')
@@ -25,12 +26,12 @@ export class BoardsController {
     }
 
     @Patch(':id')
-    update(@CurrentUser() user: SafeUser, @Param() params: FindBoardParamsDto, @Body() dto: UpdateBoardDto) {
-        return this.boardsService.update(params.id, user.id, dto);
+    update(@CurrentUser() user: SafeUser, @Param() params: FindBoardParamsDto, @Body() dto: UpdateBoardDto, @SocketId() socketId?: string) {
+        return this.boardsService.update(params.id, user.id, dto, socketId);
     }
 
     @Delete(':id')
-    remove(@CurrentUser() user: SafeUser, @Param() params: FindBoardParamsDto) {
-        return this.boardsService.remove(params.id, user.id);
+    remove(@CurrentUser() user: SafeUser, @Param() params: FindBoardParamsDto, @SocketId() socketId?: string) {
+        return this.boardsService.remove(params.id, user.id, socketId);
     }
 }
