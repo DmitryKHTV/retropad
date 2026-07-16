@@ -3,18 +3,17 @@ import {PrismaService} from "../prisma/prisma.service";
 import {Sticker} from "@prisma/client";
 import {CreateStickerDto, UpdateStickerDto} from "./dto";
 import {BoardAccessService} from "../board-access/board-access.service";
-import {EventEmitter2} from "@nestjs/event-emitter";
-import {BOARD_CHANGED, BoardChangedEvent} from "../realtime/events";
+import {BoardEventsService} from "../realtime/board-events.service";
 
 @Injectable()
 export class StickersService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly boardAccess: BoardAccessService,
-        private readonly eventEmitter: EventEmitter2
+        private readonly boardEvents: BoardEventsService
     ) {}
 
-    async create(dto: CreateStickerDto, requesterId: string): Promise<Sticker> {
+    async create(dto: CreateStickerDto, requesterId: string, socketId?: string): Promise<Sticker> {
         const column = await this.prisma.column.findUnique({
             where: {id: dto.columnId},
             select: {boardId: true},
@@ -26,12 +25,11 @@ export class StickersService {
         const lastStickerInColumn = await this.prisma.sticker.findFirst({where: {columnId: dto.columnId}, orderBy: {order: "desc"}, select: {order: true}});
         const nextOrder = (lastStickerInColumn?.order ?? -1) + 1;
         const newSticker = await this.prisma.sticker.create({data: {...dto, order: nextOrder, authorId: requesterId}});
-        const event: BoardChangedEvent = {boardId: column.boardId};
-        this.eventEmitter.emit(BOARD_CHANGED, event);
+        this.boardEvents.boardChanged(column.boardId, socketId);
         return newSticker;
     }
 
-    async update(id: string, dto: UpdateStickerDto, requesterId: string): Promise<Sticker> {
+    async update(id: string, dto: UpdateStickerDto, requesterId: string, socketId?: string): Promise<Sticker> {
         const current = await this.prisma.sticker.findUnique({
             where: {id},
             select: {
@@ -52,10 +50,15 @@ export class StickersService {
         const isMoving = newColumnId !== current.columnId || newOrder !== current.order;
 
         if (!isMoving) {
-            return this.prisma.sticker.update({where: {id}, data: dto});
+            const updated = await this.prisma.sticker.update({where: {id}, data: dto});
+            this.boardEvents.boardChanged(current.column.boardId, socketId);
+            return updated;
         }
 
-        return this.prisma.$transaction(async (tx) => {
+        // Emit only after the transaction has committed — an event sent from
+        // inside would advertise a state other clients can't read yet (or ever,
+        // if the transaction rolls back).
+        const moved = await this.prisma.$transaction(async (tx) => {
             if (newColumnId !== current.columnId) {
                 const targetColumn = await tx.column.findUnique({
                     where: {id: newColumnId},
@@ -90,9 +93,11 @@ export class StickersService {
 
             return tx.sticker.update({where: {id}, data: dto});
         });
+        this.boardEvents.boardChanged(current.column.boardId, socketId);
+        return moved;
     }
 
-    async remove(id: string, requesterId: string): Promise<Sticker> {
+    async remove(id: string, requesterId: string, socketId?: string): Promise<Sticker> {
         const sticker = await this.prisma.sticker.findUnique({
             where: {id},
             select: {column: {select: {boardId: true}}, authorId: true},
@@ -101,6 +106,8 @@ export class StickersService {
             throw new NotFoundException(`Sticker ${id} not found`);
         }
         await this.boardAccess.assertCanTouchSticker(sticker.column.boardId, requesterId, sticker.authorId);
-        return this.prisma.sticker.delete({where: {id}});
+        const deleted = await this.prisma.sticker.delete({where: {id}});
+        this.boardEvents.boardChanged(sticker.column.boardId, socketId);
+        return deleted;
     }
 }

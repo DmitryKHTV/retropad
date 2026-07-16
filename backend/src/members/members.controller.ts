@@ -3,6 +3,7 @@ import {MembersService} from "./members.service";
 import {AddMemberDto, BoardMembersParamsDto, MemberParamsDto, UpdateMemberDto} from "./dto";
 import {JwtAuthGuard} from "../auth/guards";
 import {CurrentUser, type SafeUser} from "../auth/decorators";
+import {SocketId} from "../realtime/socket-id.decorator";
 
 @UseGuards(JwtAuthGuard)
 @Controller('boards/:boardId/members')
@@ -15,17 +16,17 @@ export class MembersController {
     }
 
     @Post()
-    add(@CurrentUser() user: SafeUser, @Param() params: BoardMembersParamsDto, @Body() dto: AddMemberDto) {
-        return this.membersService.add(params.boardId, user.id, dto);
+    add(@CurrentUser() user: SafeUser, @Param() params: BoardMembersParamsDto, @Body() dto: AddMemberDto, @SocketId() socketId?: string) {
+        return this.membersService.add(params.boardId, user.id, dto, socketId);
     }
 
     @Patch(':userId')
-    updateRole(@CurrentUser() user: SafeUser, @Param() params: MemberParamsDto, @Body() dto: UpdateMemberDto) {
-        return this.membersService.updateRole(params.boardId, params.userId, user.id, dto);
+    updateRole(@CurrentUser() user: SafeUser, @Param() params: MemberParamsDto, @Body() dto: UpdateMemberDto, @SocketId() socketId?: string) {
+        return this.membersService.updateRole(params.boardId, params.userId, user.id, dto, socketId);
     }
 
     @Delete(':userId')
-    remove(@CurrentUser() user: SafeUser, @Param() params: MemberParamsDto) {
-        return this.membersService.remove(params.boardId, params.userId, user.id);
+    remove(@CurrentUser() user: SafeUser, @Param() params: MemberParamsDto, @SocketId() socketId?: string) {
+        return this.membersService.remove(params.boardId, params.userId, user.id, socketId);
     }
 }
