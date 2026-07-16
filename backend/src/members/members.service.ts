@@ -10,6 +10,7 @@ import {BoardRole, Prisma} from "@prisma/client";
 import {BoardAccessService, type EffectiveRole} from "../board-access/board-access.service";
 import {UsersService} from "../users/users.service";
 import {AddMemberDto, UpdateMemberDto} from "./dto";
+import {BoardEventsService} from "../realtime/board-events.service";
 
 const memberSelect = {
     role: true,
@@ -26,6 +27,7 @@ export class MembersService {
         private readonly prisma: PrismaService,
         private readonly boardAccess: BoardAccessService,
         private readonly users: UsersService,
+        private readonly boardEvents: BoardEventsService,
     ) {}
 
     // The owner is synthesized as the first entry — the members table stores only EDITOR/VIEWER,
@@ -46,7 +48,7 @@ export class MembersService {
         ];
     }
 
-    async add(boardId: string, requesterId: string, dto: AddMemberDto): Promise<MemberPayload> {
+    async add(boardId: string, requesterId: string, dto: AddMemberDto, socketId?: string): Promise<MemberPayload> {
         await this.boardAccess.assertCanManage(boardId, requesterId);
         const user = await this.users.findByEmail(dto.email);
         if (!user) {
@@ -57,10 +59,12 @@ export class MembersService {
             throw new BadRequestException('The board owner is already a member');
         }
         try {
-            return await this.prisma.boardMember.create({
+            const member = await this.prisma.boardMember.create({
                 data: {boardId, userId: user.id, role: dto.role ?? BoardRole.EDITOR},
                 select: memberSelect,
             });
+            this.boardEvents.boardChanged(boardId, socketId);
+            return member;
         } catch (e) {
             if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
                 throw new ConflictException('User is already a member of this board');
@@ -74,14 +78,17 @@ export class MembersService {
         targetUserId: string,
         requesterId: string,
         dto: UpdateMemberDto,
+        socketId?: string,
     ): Promise<MemberPayload> {
         await this.boardAccess.assertCanManage(boardId, requesterId);
         try {
-            return await this.prisma.boardMember.update({
+            const member = await this.prisma.boardMember.update({
                 where: {boardId_userId: {boardId, userId: targetUserId}},
                 data: {role: dto.role},
                 select: memberSelect,
             });
+            this.boardEvents.boardChanged(boardId, socketId);
+            return member;
         } catch (e) {
             if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
                 throw new NotFoundException('User is not a member of this board');
@@ -91,7 +98,7 @@ export class MembersService {
     }
 
     // The owner may remove anyone; a member may remove themself (self-leave).
-    async remove(boardId: string, targetUserId: string, requesterId: string): Promise<MemberPayload> {
+    async remove(boardId: string, targetUserId: string, requesterId: string, socketId?: string): Promise<MemberPayload> {
         const isSelfLeave = targetUserId === requesterId;
         if (!isSelfLeave) {
             await this.boardAccess.assertCanManage(boardId, requesterId);
@@ -103,9 +110,11 @@ export class MembersService {
         if (!targetRole) {
             throw new NotFoundException('User is not a member of this board');
         }
-        return this.prisma.boardMember.delete({
+        const removed = await this.prisma.boardMember.delete({
             where: {boardId_userId: {boardId, userId: targetUserId}},
             select: memberSelect,
         });
+        this.boardEvents.boardChanged(boardId, socketId);
+        return removed;
     }
 }

@@ -3,6 +3,7 @@ import {PrismaService} from "../prisma/prisma.service";
 import { Board, Prisma } from '@prisma/client';
 import {UpdateBoardDto} from "./dto";
 import {BoardAccessService, type EffectiveRole} from "../board-access/board-access.service";
+import {BoardEventsService} from "../realtime/board-events.service";
 
 export type BoardWithColumns = Prisma.BoardGetPayload<{
     include: {
@@ -21,6 +22,7 @@ export class BoardsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly boardAccess: BoardAccessService,
+        private readonly boardEvents: BoardEventsService,
     ) {}
 
     async findOne(id: string, requesterId: string): Promise<BoardWithColumnsAndRole> {
@@ -72,15 +74,19 @@ export class BoardsService {
         return { ...board, myRole: 'OWNER' };
     }
 
-    async update(id: string, requesterId: string, dto: UpdateBoardDto): Promise<BoardWithRole> {
+    async update(id: string, requesterId: string, dto: UpdateBoardDto, socketId?: string): Promise<BoardWithRole> {
         await this.boardAccess.assertCanManage(id, requesterId);
         const board = await this.prisma.board.update({ where: { id }, data: dto });
+        this.boardEvents.boardChanged(id, socketId);
         return { ...board, myRole: 'OWNER' };
     }
 
-    async remove(id: string, requesterId: string): Promise<BoardWithRole> {
+    // No emit on create: the board has no room (nobody could have joined it yet)
+
+    async remove(id: string, requesterId: string, socketId?: string): Promise<BoardWithRole> {
         await this.boardAccess.assertCanManage(id, requesterId);
         const board = await this.prisma.board.delete({ where: { id } });
+        this.boardEvents.boardChanged(id, socketId);
         return { ...board, myRole: 'OWNER' };
     }
 }

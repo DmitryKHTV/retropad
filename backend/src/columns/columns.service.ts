@@ -3,12 +3,14 @@ import {PrismaService} from "../prisma/prisma.service";
 import {Column} from "@prisma/client";
 import {CreateColumnDto, UpdateColumnDto} from "./dto";
 import {BoardAccessService} from "../board-access/board-access.service";
+import {BoardEventsService} from "../realtime/board-events.service";
 
 @Injectable()
 export class ColumnsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly boardAccess: BoardAccessService,
+        private readonly boardEvents: BoardEventsService,
     ) {}
 
     async findAllByBoard(boardId: string, requestedId: string): Promise<Column[]> {
@@ -19,12 +21,14 @@ export class ColumnsService {
     // Columns are board structure, so all mutations are OWNER-only. Letting
     // EDITOR delete a column would cascade-delete other people's stickers,
     // bypassing the "EDITOR touches only own stickers" rule.
-    async create(dto: CreateColumnDto, requestedId: string): Promise<Column> {
+    async create(dto: CreateColumnDto, requestedId: string, socketId?: string): Promise<Column> {
         await this.boardAccess.assertCanManage(dto.boardId, requestedId);
-        return this.prisma.column.create({data: dto});
+        const column = await this.prisma.column.create({data: dto});
+        this.boardEvents.boardChanged(dto.boardId, socketId);
+        return column;
     }
 
-    async update(dto: UpdateColumnDto, requesterId: string, columnId: string): Promise<Column> {
+    async update(dto: UpdateColumnDto, requesterId: string, columnId: string, socketId?: string): Promise<Column> {
         const current = await this.prisma.column.findUnique({
             where: {id: columnId},
             select: {
@@ -40,10 +44,13 @@ export class ColumnsService {
         const isMoving = newOrder !== current.order;
 
         if (!isMoving) {
-            return this.prisma.column.update({where: {id: columnId}, data: dto});
+            const updated = await this.prisma.column.update({where: {id: columnId}, data: dto});
+            this.boardEvents.boardChanged(current.boardId, socketId);
+            return updated;
         }
 
-        return this.prisma.$transaction(async (tx) => {
+        // Emit only after the transaction has committed (see StickersService.update)
+        const moved = await this.prisma.$transaction(async (tx) => {
             if (newOrder > current.order) {
                 await tx.column.updateMany({
                     where: {boardId: current.boardId, order: {gt: current.order, lte: newOrder}},
@@ -57,9 +64,11 @@ export class ColumnsService {
             }
             return tx.column.update({where: {id: columnId}, data: dto});
         });
+        this.boardEvents.boardChanged(current.boardId, socketId);
+        return moved;
     }
 
-    async remove(columnId: string, requesterId: string): Promise<Column> {
+    async remove(columnId: string, requesterId: string, socketId?: string): Promise<Column> {
         const current = await this.prisma.column.findUnique({
             where: {id: columnId},
             select: {boardId: true},
@@ -68,6 +77,8 @@ export class ColumnsService {
         if (!current) { throw new NotFoundException("No such column"); }
         await this.boardAccess.assertCanManage(current.boardId, requesterId);
 
-        return this.prisma.column.delete({where: {id: columnId}});
+        const deleted = await this.prisma.column.delete({where: {id: columnId}});
+        this.boardEvents.boardChanged(current.boardId, socketId);
+        return deleted;
     }
 }
