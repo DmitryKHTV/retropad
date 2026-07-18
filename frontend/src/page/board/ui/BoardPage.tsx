@@ -1,7 +1,7 @@
 'use client'
 
 import {useState} from "react";
-import {useBoard} from "@/entities/board";
+import {useBoard, useBoardChangesWs} from "@/entities/board";
 import cls from "./BoardPage.module.css";
 import {
     DndContext,
@@ -30,6 +30,7 @@ export const BoardPage = (props: BoardPageProps) => {
     const {id} = props;
     const {data: boardData} = useBoard(id);
     const {data: me} = useMe();
+    useBoardChangesWs(id);
     const reorderMutation = useReorderColumn();
 
     const [activeId, setActiveId] = useState<string | null>(null);
