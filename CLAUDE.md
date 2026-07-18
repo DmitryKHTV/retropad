@@ -44,6 +44,7 @@ src/
   stickers/      # Stickers (belong to a column, ordered)
   members/       # Board members (EDITOR/VIEWER collaborators, added by email)
   board-access/  # BoardAccessService — central role resolution + authz asserts
+  realtime/      # socket.io gateway + BoardEventsService (see Realtime section)
   prisma/        # Global PrismaService
   config/        # Env validation
 ```
@@ -198,6 +199,17 @@ Other rules:
 - Cross-board sticker moves are rejected as `ForbiddenException` even when the user has access to both boards — semantic boundary in `StickersService`, not authz.
 - Adding members by email deliberately allows probing which emails are registered (404 vs 400/409) — accepted tradeoff (same as Trello), documented for interviews.
 
+## Realtime (WebSocket)
+
+`src/realtime/` — socket.io gateway (`@nestjs/websockets`), CORS origin :3001 with credentials. Design: HTTP for reads + mutations, WS is an **invalidation bell only** — `board:changed {boardId}` → client refetches. No granular per-entity events (reconnect resync = refetch, self-healing).
+
+- **Auth**: socket.io middleware registered in `afterInit` verifies the `access_token` httpOnly cookie (JWT) *before* the connection is accepted — middlewares run to completion before any client packet, unlike `handleConnection`, which races fast clients. Failure → `connect_error 'Unauthorized'`; the frontend reacts with `refreshSession()` + one retry.
+- **Wire contract** (mirrored by hand in `frontend/src/shared/api/socket/events.ts`): `board:join {boardId}` → ack `{ok}` (gated by `BoardAccessService.assertCanView`, rooms `board:{id}`), `board:changed {boardId}`.
+- **Event flow**: feature services stay HTTP/WS-free — they call `BoardEventsService` (typed facade over EventEmitter2, exported by `RealtimeModule`) after commit in all 10 mutations; the gateway `@OnEvent`-listens and broadcasts to the room. Internal bus names are dot-style (`board.changed`), wire names colon-style (`board:changed`) — two contracts, never merged.
+- **Echo suppression**: mutations carry an `x-socket-id` header (auto-stamped by the frontend's ofetch `onRequest`); `@SocketId()` decorator → service param → `.except(initiatorSocketId)`. Never used for authorization — the client can put anything there.
+- Gateway declares its **own `ValidationPipe`** with a `WsException` factory — global pipes never reach gateways (SocketModule builds its pipe context without `ApplicationConfig`).
+- Known tradeoffs: a removed member stays in the room until disconnect (gets bells only, no data); malformed join payload → ack never fires (client uses `.timeout()`); no `board:leave` — the client filters events by `boardId`.
+
 ## Common Commands
 
 ```bash
@@ -269,7 +281,6 @@ DELETE /stickers/:id              - auth, OWNER any sticker, EDITOR only own;
 ## What's NOT Built Yet
 
 - Voting on stickers
-- WebSocket gateway for real-time updates
 - BullMQ background jobs (e.g., PDF export)
 - Tests (unit + e2e)
 - Logging (Pino) and observability (Sentry)
