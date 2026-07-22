@@ -19,6 +19,7 @@ import {AddColumnButton} from "@/features/column/add-column";
 import {EditBoardTitle} from "@/features/board/edit-board";
 import {BoardColumn} from "@/widgets/board-column";
 import {BoardMembersPanel} from "@/widgets/board-members";
+import {VotesBudget} from "@/features/sticker/vote-sticker";
 import {useMe} from "@/entities/user";
 import {canManageBoard} from "@/shared/lib/permissions";
 
@@ -72,6 +73,7 @@ export const BoardPage = (props: BoardPageProps) => {
                 {isOwner
                     ? <EditBoardTitle id={boardData.id} title={boardData.title} />
                     : <h1 className={cls.plainTitle}>{boardData.title}</h1>}
+                <VotesBudget left={boardData.myVotes.left} max={boardData.myVotes.max} />
                 <BoardMembersPanel boardId={id} myRole={boardData.myRole} />
             </div>
             {isOwner && <AddColumnButton boardId={id} order={columns.length} />}
@@ -86,13 +88,13 @@ export const BoardPage = (props: BoardPageProps) => {
                     <div className={cls.columnsWrapper}>
                         {columns.map((column) => (
                             <SortableColumn key={`column-${column.id}`} id={column.id} disabled={!isOwner}>
-                                <BoardColumn column={column} myRole={boardData.myRole} userId={me.id} />
+                                <BoardColumn column={column} myRole={boardData.myRole} userId={me.id} votesLeft={boardData.myVotes.left} />
                             </SortableColumn>
                         ))}
                     </div>
                 </SortableContext>
                 <DragOverlay dropAnimation={null}>
-                    {activeColumn ? <BoardColumn column={activeColumn} myRole={boardData.myRole} userId={me.id} /> : null}
+                    {activeColumn ? <BoardColumn column={activeColumn} myRole={boardData.myRole} userId={me.id} votesLeft={boardData.myVotes.left} /> : null}
                 </DragOverlay>
             </DndContext>
         </main>

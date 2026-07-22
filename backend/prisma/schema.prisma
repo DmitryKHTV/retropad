@@ -12,11 +12,13 @@ model Board {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ownerId   String
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-  columns   Column[]
-  members   BoardMember[]
+  columns Column[]
+  members BoardMember[]
+  votes   Vote[]
+
   @@index([ownerId])
 }
 
@@ -32,8 +34,8 @@ model BoardMember {
   role      BoardRole @default(EDITOR)
   createdAt DateTime  @default(now())
 
-  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([boardId, userId])
   @@index([userId])
@@ -46,10 +48,11 @@ model Column {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  boardId   String
-  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
-  stickers  Sticker[]
+  stickers Sticker[]
+
   @@index([boardId])
 }
 
@@ -61,14 +64,36 @@ model Sticker {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  columnId  String
-  column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  columnId String
+  column   Column @relation(fields: [columnId], references: [id], onDelete: Cascade)
 
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  votes Vote[]
 
   @@index([columnId])
   @@index([authorId])
+}
+
+model Vote {
+  stickerId String
+  userId    String
+  boardId   String
+  count     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sticker Sticker @relation(fields: [stickerId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board   Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@id([stickerId, userId])
+  // boardId leads: serves both `WHERE boardId` (per-sticker totals) and
+  // `WHERE boardId AND userId` (vote-limit check). userId needs its own index —
+  // the composite can't serve the FK cascade, it isn't the leftmost column.
+  @@index([boardId, userId])
+  @@index([userId])
 }
 
 model User {
@@ -83,15 +108,16 @@ model User {
   memberships   BoardMember[]
   refreshTokens RefreshToken[]
   stickers      Sticker[]
+  votes         Vote[]
 }
 
 model RefreshToken {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash    String
   expiresAt    DateTime
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
   revokedAt    DateTime?
   replacedById String?
   userAgent    String?

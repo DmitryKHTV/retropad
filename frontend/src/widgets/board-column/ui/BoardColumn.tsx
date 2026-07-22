@@ -12,12 +12,13 @@ interface BoardColumnProps {
     column: ColumnWithStickers;
     myRole: EffectiveRole;
     userId: string;
+    votesLeft: number;
 }
 
-// Empty slots make the entity cards fall back to their plain read-only
-// rendering. Column structure (rename/delete) is OWNER-only; sticker slots
-// go to anyone who can edit, with per-sticker gating inside ColumnSticker.
-export const BoardColumn = ({column, myRole, userId}: BoardColumnProps) => {
+// Column structure (rename/delete/add-sticker) is gated by role. Stickers are
+// always rendered through ColumnSticker — even a VIEWER needs it, because voting
+// is open to every role; edit/delete slots gate themselves inside it.
+export const BoardColumn = ({column, myRole, userId, votesLeft}: BoardColumnProps) => {
     const canEdit = canEditBoard(myRole);
     const isOwner = canManageBoard(myRole);
     return (
@@ -30,9 +31,15 @@ export const BoardColumn = ({column, myRole, userId}: BoardColumnProps) => {
                 </>
             ) : undefined}
             actions={canEdit ? <AddStickerButton columnId={column.id} boardId={column.boardId} /> : undefined}
-            renderSticker={canEdit ? (sticker) => (
-                <ColumnSticker boardId={column.boardId} sticker={sticker} myRole={myRole} userId={userId} />
-            ) : undefined}
+            renderSticker={(sticker) => (
+                <ColumnSticker
+                    boardId={column.boardId}
+                    sticker={sticker}
+                    myRole={myRole}
+                    userId={userId}
+                    votesLeft={votesLeft}
+                />
+            )}
         />
     );
 };

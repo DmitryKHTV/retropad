@@ -44,6 +44,7 @@ src/
   stickers/      # Stickers (belong to a column, ordered)
   members/       # Board members (EDITOR/VIEWER collaborators, added by email)
   board-access/  # BoardAccessService — central role resolution + authz asserts
+  votes/         # Dot-voting on stickers (multi-dot, budget per user per board)
   realtime/      # socket.io gateway + BoardEventsService (see Realtime section)
   prisma/        # Global PrismaService
   config/        # Env validation
@@ -142,9 +143,26 @@ model Sticker {
   @@index([columnId])
   @@index([authorId])
 }
+
+model Vote {
+  stickerId String
+  userId    String
+  boardId   String
+  count     Int      @default(1)
+  sticker   Sticker  @relation(fields: [stickerId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@id([stickerId, userId])
+  @@index([boardId, userId])
+  @@index([userId])
+}
 ```
 
 Hierarchy: `Board → Column → Sticker`. Stickers do NOT have a direct FK to Board — ownership chain goes through `Column.board.ownerId`. `Sticker.authorId` is the creating user (pre-existing rows were backfilled with the board owner in the `sticker_author` migration); deleting a user cascade-deletes their stickers even on other people's boards — consciously consistent with the rest of the schema. No `(columnId, order)` unique constraint — transient duplicates are valid mid-transaction during reorder.
+
+`Vote` is multi-dot (`count`), one row per (sticker, user). It is the one place that **deliberately breaks** the "no direct FK to Board" rule: `boardId` is denormalized so the vote-limit aggregate and the per-board totals are single-table queries. This is safe only because `StickersService` rejects cross-board moves, which makes a sticker's board immutable — do not relax that check without revisiting this column. Index order matters: `[boardId, userId]` leads with `boardId` so it serves both `WHERE boardId` (totals) and `WHERE boardId AND userId` (limit check), while the separate `[userId]` exists for the FK cascade, which the composite can't serve (leftmost-prefix rule).
 
 **Always**: index foreign keys you filter on. Postgres doesn't auto-index FKs.
 
@@ -178,6 +196,8 @@ Guards are applied at controller level: `@UseGuards(JwtAuthGuard)` above `@Contr
 
 - **Nested writes** for atomic creation of related records — single Prisma call wraps everything in one implicit transaction. Used in `BoardsService.create` to seed 3 default columns when a board is created.
 - **`prisma.$transaction(async (tx) => {...})`** (interactive) when writes depend on prior reads or branching logic. Used in `StickersService.update` for drag-drop reorder: `updateMany` with `{order: {decrement/increment: 1}}` shifts siblings, then `update` moves the target. All siblings in one row-level lock scope.
+- **`prisma.$transaction([...])`** (array form) when several independent *reads* must agree with each other — they run on one snapshot. Used in `BoardsService.findOne` so the board tree, the per-sticker vote totals and the requester's own votes can't disagree, and in `MembersService.remove` to drop a membership and that member's votes together.
+- **Serializable + retry** in `VotesService`: the vote-limit check is a read the write depends on, so it runs at `Serializable`. Postgres may abort it with a serialization failure (Prisma `P2034`) — the transaction never applied, so `withSerializableRetry` replays it up to `SERIALIZATION_MAX_ATTEMPTS` (3) with jittered backoff, and answers `409` if contention persists. Never surface `P2034` as a 500; and never "fix" it by lowering the isolation level.
 - Reorder strategy is **integer with reindex on shift**, not fractional. Gaps are allowed (DELETE doesn't close them). Migrate to LexoRank only when collaborative editing makes integer reindex painful.
 
 ## Authorization: Roles & BoardAccessService
@@ -245,7 +265,8 @@ GET    /boards                    - auth, boards the user owns OR is a member of
                                      each item includes `myRole`
 GET    /boards/:id                - auth, any role; returns board with columns,
                                      stickers (sorted by `order` asc, each with
-                                     author {id,name,email}) + `myRole`
+                                     author {id,name,email} and votes {total,mine})
+                                     + `myRole` + `myVotes {spent,left,max}`
 POST   /boards                    - auth, creates with current user as owner;
                                      atomically seeds 3 default columns
                                      (Went Well / To Improve / Action Items)
@@ -261,7 +282,8 @@ PATCH  /boards/:boardId/members/:userId - auth, OWNER only; body {role};
                                      404 if not a member
 DELETE /boards/:boardId/members/:userId - auth, OWNER removes anyone;
                                      a member may remove themself (self-leave);
-                                     403 removing the owner
+                                     403 removing the owner; also deletes that
+                                     member's votes on the board (same transaction)
 
 POST   /columns                   - auth, OWNER only
 GET    /columns/board/:boardId    - auth, any role (no stickers)
@@ -276,13 +298,33 @@ PATCH  /stickers/:id              - auth, OWNER any sticker, EDITOR only own
                                      $transaction
 DELETE /stickers/:id              - auth, OWNER any sticker, EDITOR only own;
                                      gaps in `order` are fine
+
+POST   /stickers/:stickerId/votes - auth, ANY role incl. VIEWER (participants
+                                     vote); no body. Adds one dot (upsert →
+                                     count+1). 403 when the per-board budget
+                                     (MAX_VOTES_COUNT = 5) is spent, 409 on
+                                     persistent serialization contention
+DELETE /stickers/:stickerId/votes - auth, ANY role; removes one dot
+                                     (count-1, row deleted at 1). 404 if the
+                                     user has no vote on that sticker —
+                                     counts never go negative
 ```
+
+## Voting
+
+Classic dot-voting. `MAX_VOTES_COUNT` and `SERIALIZATION_MAX_ATTEMPTS` live in `src/votes/votes.constants.ts` — the budget is imported by `BoardsService` so the client gets it as `myVotes.max` instead of hardcoding 5 in the UI.
+
+- **Any role may vote, including VIEWER** — viewers are retro participants, so votes are gated by `assertCanView`, not `assertCanEdit`.
+- **Aggregates only leave the server.** The payload exposes `votes {total, mine}` per sticker and `myVotes {spent, left, max}` per board; individual `Vote` rows never reach Node, let alone the client. Dot-voting stays anonymous by construction — adding a "who voted" view means a new endpoint and a deliberate decision, not a payload tweak.
+- The budget is **per user per board**, not per sticker: all 5 dots may go on one sticker.
+- Deleting a sticker cascade-deletes its votes, which refunds those dots. Removing a member deletes their votes on that board.
+- No way to reset a voting round yet — a second round on the same board would accumulate. Belongs with retro phases.
 
 ## What's NOT Built Yet
 
-- Voting on stickers
+- Voting UI on the frontend (backend is done: dots on stickers, remaining-votes counter, sort-by-votes view)
 - BullMQ background jobs (e.g., PDF export)
-- Tests (unit + e2e)
+- Tests (unit + e2e) — the `*.spec.ts` files are untouched `nest g` stubs and currently fail (they instantiate services with no providers). Verification so far is smoke scripts, not Jest.
 - Logging (Pino) and observability (Sentry)
 - Swagger/OpenAPI
 - Rate limiting (`@nestjs/throttler`)

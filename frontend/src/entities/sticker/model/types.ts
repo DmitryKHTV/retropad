@@ -13,3 +13,16 @@ export interface Sticker {
     updatedAt: string;
     author: StickerAuthor;
 }
+
+// Aggregates only — `total` across everyone, `mine` is the requester's own dots.
+// Individual voters never leave the server (dot-voting stays anonymous).
+export interface StickerVotes {
+    total: number;
+    mine: number;
+}
+
+// GET /boards/:id nests stickers WITH vote aggregates. The bare `Sticker` is the
+// shape mutation endpoints return (POST/PATCH/DELETE /stickers — no votes there).
+export interface StickerWithVotes extends Sticker {
+    votes: StickerVotes;
+}

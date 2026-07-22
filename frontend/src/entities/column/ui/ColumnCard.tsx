@@ -1,12 +1,12 @@
 import {Fragment, ReactNode} from "react";
 import {ColumnWithStickers} from "@/entities/column/model";
-import {Sticker, StickerCard} from "@/entities/sticker";
+import {StickerWithVotes, StickerCard} from "@/entities/sticker";
 import cls from "./ColumnCard.module.css";
 
 type ColumnCardProps = ColumnWithStickers & {
     titleSlot?: ReactNode;
     actions?: ReactNode;
-    renderSticker?: (sticker: Sticker) => ReactNode;
+    renderSticker?: (sticker: StickerWithVotes) => ReactNode;
 };
 
 export const ColumnCard = (props: ColumnCardProps) => {
@@ -22,7 +22,7 @@ export const ColumnCard = (props: ColumnCardProps) => {
             </div>
             <div className={cls.stickers}>
                 {stickers.length > 0
-                    ? stickers.map((sticker: Sticker) => (
+                    ? stickers.map((sticker: StickerWithVotes) => (
                         <Fragment key={`sticker-${sticker.id}`}>
                             {renderSticker
                                 ? renderSticker(sticker)
