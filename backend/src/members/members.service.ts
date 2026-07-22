@@ -110,10 +110,16 @@ export class MembersService {
         if (!targetRole) {
             throw new NotFoundException('User is not a member of this board');
         }
-        const removed = await this.prisma.boardMember.delete({
-            where: {boardId_userId: {boardId, userId: targetUserId}},
-            select: memberSelect,
-        });
+        // Votes hang off Sticker and User, not off the membership row, so nothing
+        // would clean them up on its own — a former member's dots would keep
+        // inflating sticker totals forever. Both writes or neither.
+        const [removed] = await this.prisma.$transaction([
+            this.prisma.boardMember.delete({
+                where: {boardId_userId: {boardId, userId: targetUserId}},
+                select: memberSelect,
+            }),
+            this.prisma.vote.deleteMany({where: {boardId, userId: targetUserId}}),
+        ]);
         this.boardEvents.boardChanged(boardId, socketId);
         return removed;
     }

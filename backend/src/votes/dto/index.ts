@@ -1,0 +1,1 @@
+export {VoteDto} from "./vote.dto";

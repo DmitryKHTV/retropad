@@ -12,12 +12,13 @@ import {ColumnsModule} from "./columns/columns.module";
 import {MembersModule} from "./members/members.module";
 import { RealtimeModule } from './realtime/realtime.module';
 import {EventEmitterModule} from "@nestjs/event-emitter";
+import { VotesModule } from './votes/votes.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
     isGlobal: true,
     validate: validateEnv
-  }), BoardsModule, PrismaModule, StickersModule, AuthModule, UsersModule, ColumnsModule, MembersModule, RealtimeModule, EventEmitterModule.forRoot()],
+  }), BoardsModule, PrismaModule, StickersModule, AuthModule, UsersModule, ColumnsModule, MembersModule, RealtimeModule, EventEmitterModule.forRoot(), VotesModule],
   controllers: [AppController],
   providers: [AppService],
 })
