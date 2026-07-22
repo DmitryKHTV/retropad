@@ -8,10 +8,11 @@ type StickerCardProps = {
     author: StickerAuthor;
     contentSlot?: ReactNode;
     actions?: ReactNode;
+    votesSlot?: ReactNode;
 };
 
 export const StickerCard = (props: StickerCardProps) => {
-    const {content, author, contentSlot, actions} = props;
+    const {content, author, contentSlot, actions, votesSlot} = props;
 
     return (
         <div className={cls.wrapper}>
@@ -23,6 +24,7 @@ export const StickerCard = (props: StickerCardProps) => {
                 <Avatar user={author} size="s"/>
                 <span className={cls.authorName}>{author.name ?? author.email}</span>
             </div>
+            {votesSlot}
         </div>
     );
 };

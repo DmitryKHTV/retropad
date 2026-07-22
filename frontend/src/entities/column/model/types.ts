@@ -1,4 +1,4 @@
-import {Sticker} from "@/entities/sticker";
+import {StickerWithVotes} from "@/entities/sticker";
 
 export interface Column {
     id: string;
@@ -10,5 +10,5 @@ export interface Column {
 }
 
 export interface ColumnWithStickers extends Column {
-    stickers: Sticker[];
+    stickers: StickerWithVotes[];
 }

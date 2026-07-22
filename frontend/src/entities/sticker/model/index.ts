@@ -1,1 +1,1 @@
-export type {Sticker} from "./types";
+export type {Sticker, StickerAuthor, StickerVotes, StickerWithVotes} from "./types";
