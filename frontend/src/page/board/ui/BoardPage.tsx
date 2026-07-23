@@ -91,7 +91,7 @@ export const BoardPage = (props: BoardPageProps) => {
                 onDragCancel={() => setActiveId(null)}
             >
                 <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
-                    <div className={cls.columnsWrapper}>
+                    <div className={cls.columnsWrapper} data-testid="board-scroll">
                         {columns.map((column) => (
                             <SortableColumn key={`column-${column.id}`} id={column.id} disabled={!isOwner}>
                                 <BoardColumn column={column} myRole={boardData.myRole} userId={me.id} votesLeft={boardData.myVotes.left} />

@@ -8,6 +8,8 @@
     .header{
         display: flex;
         align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
         gap: var(--gaps-m);
     }
 
@@ -26,9 +28,12 @@
         height: 100%;
         overflow-x: auto;
         width: 100%;
+        padding: 60px 0;
 
         scrollbar-width: thin;
         scrollbar-color: var(--surface-raised-top) transparent;
+
+        align-items: start;
 
         &::-webkit-scrollbar{
             height: 8px;

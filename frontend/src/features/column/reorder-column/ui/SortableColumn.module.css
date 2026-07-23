@@ -1,6 +1,6 @@
 .wrapper {
     display: flex;
-    flex: 1;
-    min-width: 600px;
+    flex: 1 0 clamp(280px, 80vw, 600px);
+    min-width: 0;
     touch-action: none;
 }
