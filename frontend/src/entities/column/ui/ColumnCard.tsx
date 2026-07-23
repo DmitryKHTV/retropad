@@ -13,7 +13,7 @@ export const ColumnCard = (props: ColumnCardProps) => {
     const {title, stickers, titleSlot, actions, renderSticker} = props;
 
     return (
-        <div className={cls.wrapper}>
+        <div className={cls.wrapper} data-testid="board-column">
             <div className={cls.title}>
                 {titleSlot ?? <p>{title}</p>}
             </div>

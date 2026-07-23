@@ -5,3 +5,9 @@
     flex-direction: column;
     padding: 32px;
 }
+
+@media (max-width: 640px) {
+    .content {
+        padding: 16px;
+    }
+}

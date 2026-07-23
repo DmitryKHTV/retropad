@@ -14,6 +14,12 @@
     box-shadow: inset 0 -1px 0 var(--highlight-edge);
 }
 
+@media (max-width: 640px) {
+    .navbar {
+        padding: 0 16px;
+    }
+}
+
 .brand {
     display: flex;
     align-items: center;
