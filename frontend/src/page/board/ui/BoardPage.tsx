@@ -20,6 +20,7 @@ import {EditBoardTitle} from "@/features/board/edit-board";
 import {BoardColumn} from "@/widgets/board-column";
 import {BoardMembersPanel} from "@/widgets/board-members";
 import {VotesBudget} from "@/features/sticker/vote-sticker";
+import {SortByVotesToggle, useSortByVotes, sortStickersByVotes} from "@/features/sticker/sort-by-votes";
 import {useMe} from "@/entities/user";
 import {canManageBoard} from "@/shared/lib/permissions";
 
@@ -35,6 +36,7 @@ export const BoardPage = (props: BoardPageProps) => {
     const reorderMutation = useReorderColumn();
 
     const [activeId, setActiveId] = useState<string | null>(null);
+    const sortByVotes = useSortByVotes();
 
     const sensors = useSensors(
         useSensor(PointerSensor, {activationConstraint: {distance: 5}}),
@@ -43,7 +45,10 @@ export const BoardPage = (props: BoardPageProps) => {
     if (!boardData || !me) return null;
 
     const isOwner = canManageBoard(boardData.myRole);
-    const columns = boardData.columns;
+    // View-only re-rank; the persisted sticker `order` is never touched.
+    const columns = sortByVotes.active
+        ? boardData.columns.map((c) => ({...c, stickers: sortStickersByVotes(c.stickers)}))
+        : boardData.columns;
     const columnIds = columns.map((c) => c.id);
     const activeColumn = columns.find((c) => c.id === activeId) ?? null;
 
@@ -74,6 +79,7 @@ export const BoardPage = (props: BoardPageProps) => {
                     ? <EditBoardTitle id={boardData.id} title={boardData.title} />
                     : <h1 className={cls.plainTitle}>{boardData.title}</h1>}
                 <VotesBudget left={boardData.myVotes.left} max={boardData.myVotes.max} />
+                <SortByVotesToggle active={sortByVotes.active} onToggle={sortByVotes.toggle} />
                 <BoardMembersPanel boardId={id} myRole={boardData.myRole} />
             </div>
             {isOwner && <AddColumnButton boardId={id} order={columns.length} />}
