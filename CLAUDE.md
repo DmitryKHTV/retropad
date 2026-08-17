@@ -6,7 +6,9 @@ Retropad is a backend API for a collaborative retrospective board (a mini-Miro f
 
 This is a learning project / portfolio piece targeting the Dutch / European mid-level full-stack market.
 
-**Frontend (in `./frontend`)**: Next.js 16 App Router, TanStack Query, TypeScript, FSD architecture. See `./frontend/CLAUDE.md` for details.
+**Frontend (in `./frontend`)**: Next.js 16 App Router, TanStack Query, TypeScript, FSD architecture, Playwright e2e. See `./frontend/CLAUDE.md` for details (that file is gitignored — it lives only in the working copy, so a fresh clone won't have it).
+
+Feature parity: every backend endpoint below has a frontend surface — boards CRUD, columns (incl. drag-reorder), stickers (inline edit, author-gated actions), members management, **dot-voting with a remaining-budget pill and a view-only sort-by-votes toggle**, and live board updates over WebSocket.
 
 ## Tech Stack
 
@@ -252,6 +254,19 @@ curl -s -c /tmp/jar -X POST http://localhost:3000/auth/login \
 curl -s -b /tmp/jar http://localhost:3000/boards
 ```
 
+```bash
+# Frontend (from ./frontend) — dev server runs on :3001, not :3000
+npm run dev
+
+# E2E — needs Docker Postgres + backend on :3000 already running;
+# Playwright starts (or reuses) the frontend itself
+npm run test:e2e                 # both projects (desktop + mobile)
+npm run test:e2e -- --project=mobile
+npm run test:e2e:ui              # watch/debug mode
+npm run test:e2e:report          # last HTML report
+npx playwright install chromium  # one-time, only browser we use
+```
+
 ## Current API Endpoints
 
 ```
@@ -320,11 +335,33 @@ Classic dot-voting. `MAX_VOTES_COUNT` and `SERIALIZATION_MAX_ATTEMPTS` live in `
 - Deleting a sticker cascade-deletes its votes, which refunds those dots. Removing a member deletes their votes on that board.
 - No way to reset a voting round yet — a second round on the same board would accumulate. Belongs with retro phases.
 
+**Frontend side** (`features/sticker/vote-sticker`, `features/sticker/sort-by-votes`):
+
+- `VoteControl` renders the dots per sticker (capped at 7, then `+N`), the user's own dots styled apart, and Vote / − buttons. It is rendered for **every** role — gating it by `canEditBoard` would be wrong.
+- `VotesBudget` shows `left/max` from `board.myVotes`; `canAddMore = votesLeft > 0` disables the Vote button client-side, but the 403 from the server remains the real limit.
+- Vote mutations are **not** optimistic: `onSettled` invalidates the board query and refetches the aggregates (the WS bell handles everyone else). Deliberate — the budget and the per-sticker totals must agree, and hand-rolling that in the cache buys little.
+- Sort-by-votes is **view-only**: `sortStickersByVotes` re-ranks a copy (`total` desc, ties by persisted `order`), state lives in a `useState` hook and resets on remount. It never issues a reorder mutation — `order` on the server is untouched.
+
+## Testing
+
+The only real tests in the repo are **frontend Playwright e2e** (`frontend/e2e/`). They drive the full stack — Next dev server on :3001, NestJS on :3000, Docker Postgres.
+
+- `playwright.config.ts` auto-starts / reuses the frontend (`webServer`), but **the backend must already be running** — Playwright can't boot it because it needs the database. A failing `setupBoard` almost always means the API is down.
+- Two projects, both chromium: `desktop` (1280×800) and `mobile` (390×844, `isMobile`/`hasTouch` hand-rolled). Playwright's iPhone descriptors default to WebKit, which we don't install — only `npx playwright install chromium` is required.
+- `e2e/helpers/board.ts` seeds state **through the API, not the UI**: register → login → create board (auto-seeds 3 columns) → post stickers, using `page.context().request` so the auth cookies land in the browser context and a subsequent `page.goto()` renders logged in. Each run uses a fresh random email — tests never share a user, so they stay parallel-safe. There is no teardown; the dev database accumulates e2e rows (`prisma migrate reset` when it bothers you).
+- Viewport-specific assertions use `test.skip(test.info().project.name !== 'mobile', ...)` rather than a separate file.
+- `BoardPage` returns `null` until the board + `me` queries resolve — always wait for a real element (`getByTestId('board-column')`) before measuring layout.
+- Selectors are `data-testid` (`board-column`, `board-scroll`), added deliberately for tests; don't replace them with text/class selectors.
+
+Backend has **no working tests**: every `*.spec.ts` is an untouched `nest g` stub that instantiates a service with no providers, so `npm test` in `backend/` fails. Backend verification so far is curl/smoke scripts. When you do write them, delete the stubs rather than patching them.
+
 ## What's NOT Built Yet
 
-- Voting UI on the frontend (backend is done: dots on stickers, remaining-votes counter, sort-by-votes view)
 - BullMQ background jobs (e.g., PDF export)
-- Tests (unit + e2e) — the `*.spec.ts` files are untouched `nest g` stubs and currently fail (they instantiate services with no providers). Verification so far is smoke scripts, not Jest.
+- Backend tests — unit (services with mocked Prisma) and e2e (supertest against a test database)
+- Frontend e2e coverage beyond board layout — no test yet for voting, members, permissions or the WS bell
+- Optimistic updates for voting (currently invalidate + refetch)
+- Voting rounds / reset (needs retro phases first)
 - Logging (Pino) and observability (Sentry)
 - Swagger/OpenAPI
 - Rate limiting (`@nestjs/throttler`)
@@ -344,8 +381,7 @@ When adding a new feature:
 
 ## Important Files
 
-- @./LEARNING.md — current learning state and the curriculum we're following
+- @./LEARNING.md — the re-learning curriculum (13 modules over the project's own code) plus the running list of known bugs/tech debt found in it. Two rules: the findings listed there are **teaching material, not a backlog** — do not fix them ahead of their module; and when a module is completed, tick it in the progress list.
 
-
-## IMPORTANT 
+## IMPORTANT
 - Redact this file after significant changes to track all our progress both on frontend and backend
