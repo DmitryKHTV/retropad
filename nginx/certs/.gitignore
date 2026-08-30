@@ -1,0 +1,3 @@
+# Cloudflare Origin CA key pair lives here on the server. Never commit it.
+*.pem
+*.key

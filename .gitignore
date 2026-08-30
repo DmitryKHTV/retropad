@@ -1,2 +1,5 @@
 .env
 .idea/
+
+# Server runbook — kept out of the public repo (server-specific details).
+/DEPLOY.md
