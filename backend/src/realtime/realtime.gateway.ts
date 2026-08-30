@@ -35,7 +35,7 @@ export interface SocketUser {
     transform: true,
     exceptionFactory: () => new WsException('Validation failed'),
 }))
-@WebSocketGateway({cors: {origin: 'http://localhost:3001', credentials: true}})
+@WebSocketGateway()
 export class RealtimeGateway implements OnGatewayInit {
     @WebSocketServer()
     private server: Server;
