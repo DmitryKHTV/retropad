@@ -180,11 +180,13 @@ Guards are applied at controller level: `@UseGuards(JwtAuthGuard)` above `@Contr
 
 ## Configuration
 
-- `prisma.config.ts` at repo root — Prisma CLI configuration (datasource URL via `env()`).
+- `prisma.config.ts` in `backend/` — Prisma CLI configuration (datasource URL via `env()`). It resolves `env("DATABASE_URL")` **eagerly, at file load**, so any CLI command fails without it — which is why the Docker build stage deliberately does not copy this file (`prisma generate` needs only the schema).
 - `schema.prisma` does NOT contain `url` (Prisma 7 change).
 - `PrismaService` constructs `PrismaClient` with `new PrismaPg({ connectionString })` adapter.
 - Env vars validated on app start via `class-validator` in `src/config/env.validation.ts`.
 - Always use `configService.getOrThrow<T>('KEY')` — fail-fast on missing env.
+- `CORS_ORIGIN` (required, comma-separated) is the single source of allowed browser origins for **both** HTTP CORS and the socket.io handshake. `PORT` is optional (defaults to 3000).
+- `tsconfig.build.json` pins `rootDir: ./src` and excludes `prisma.config.ts`. Without it TypeScript infers `backend/` as the common root and emits `dist/src/main.js`, silently breaking `npm run start:prod` (`node dist/main`). Watch out for stale `tsconfig.build.tsbuildinfo`: with `incremental: true` and `deleteOutDir: true`, a stale cache produces a green build with an empty `dist/`.
 
 ## Code Style
 
@@ -223,7 +225,7 @@ Other rules:
 
 ## Realtime (WebSocket)
 
-`src/realtime/` — socket.io gateway (`@nestjs/websockets`), CORS origin :3001 with credentials. Design: HTTP for reads + mutations, WS is an **invalidation bell only** — `board:changed {boardId}` → client refetches. No granular per-entity events (reconnect resync = refetch, self-healing).
+`src/realtime/` — socket.io gateway (`@nestjs/websockets`). CORS comes from `CorsIoAdapter` (`src/realtime/cors-io.adapter.ts`), registered in `main.ts` via `app.useWebSocketAdapter`, **not** from the `@WebSocketGateway()` decorator: decorator arguments are evaluated at module import time, before `ConfigModule` has loaded `.env`, so `process.env` there would disagree with what `main.ts` sees. The adapter reads the same `CORS_ORIGIN` through `ConfigService`. Never put `cors` back into the decorator — the adapter silently overrides it. Design: HTTP for reads + mutations, WS is an **invalidation bell only** — `board:changed {boardId}` → client refetches. No granular per-entity events (reconnect resync = refetch, self-healing).
 
 - **Auth**: socket.io middleware registered in `afterInit` verifies the `access_token` httpOnly cookie (JWT) *before* the connection is accepted — middlewares run to completion before any client packet, unlike `handleConnection`, which races fast clients. Failure → `connect_error 'Unauthorized'`; the frontend reacts with `refreshSession()` + one retry.
 - **Wire contract** (mirrored by hand in `frontend/src/shared/api/socket/events.ts`): `board:join {boardId}` → ack `{ok}` (gated by `BoardAccessService.assertCanView`, rooms `board:{id}`), `board:changed {boardId}`.
@@ -270,6 +272,10 @@ npx playwright install chromium  # one-time, only browser we use
 ## Current API Endpoints
 
 ```
+GET    /health                    - public, {status:'ok'}; liveness only, no DB
+                                     ping (the app cannot reach listen() with a
+                                     dead DB — Prisma $connect runs first)
+
 POST   /auth/register             - public
 POST   /auth/login                - public, sets access_token + refresh_token
                                      httpOnly cookies; body = { user } only
@@ -355,6 +361,55 @@ The only real tests in the repo are **frontend Playwright e2e** (`frontend/e2e/`
 
 Backend has **no working tests**: every `*.spec.ts` is an untouched `nest g` stub that instantiates a service with no providers, so `npm test` in `backend/` fails. Backend verification so far is curl/smoke scripts. When you do write them, delete the stubs rather than patching them.
 
+## Deployment (in progress, started 2026-08-17)
+
+Target: a single Ubuntu 24.04 VPS, images built **on the server** (`git pull && docker compose up -d --build`), nginx in front, **TLS terminated by Cloudflare**. Domain `dkhomutov.dev` (Cloudflare): `retropad.dkhomutov.dev` for the frontend, `api-retropad.dkhomutov.dev` for the API — both deliberately **first-level** subdomains, see the 2026-08-30 block. `.dev` is HSTS-preloaded in browsers, so there is no plain-HTTP stage to test against — TLS from the first request.
+
+Done so far:
+
+- **Backend prod wiring** — `CORS_ORIGIN`/`PORT` via `ConfigService`, `CorsIoAdapter`, `enableShutdownHooks()`, `trust proxy` (production only), `GET /health`.
+- **`backend/Dockerfile`** — three stages on `node:22-bookworm-slim`: `base` (installs `openssl`), `build`, `runtime`. Verified end to end: image builds, migrations apply, register/login/CORS work, `docker stop` exits 0 in ~0.5s.
+
+Non-obvious constraints baked into that Dockerfile — do not "clean them up":
+
+- `openssl` is installed in the shared `base` stage, so build and runtime agree. Installing it in `runtime` only makes Prisma re-detect the libssl version, decide the bundled engine is wrong, and try to download a new one into `node_modules` at startup — which fails under `USER node` (root-owned files) and kills the container.
+- `prisma` is a **production** dependency, not a dev one: `npm prune --omit=dev` runs in the build stage, and the runtime needs the CLI for `migrate deploy`. Cost: the CLI drags Prisma Studio's React bundle in, ~290 MB of the 853 MB image. Accepted deliberately — splitting migrations into a second image makes total disk usage worse on a single-node deploy.
+- `CMD` is `sh -c "prisma migrate deploy && exec node dist/main"`. The `exec` is load-bearing: without it `sh` stays PID 1, Docker's SIGTERM never reaches Node, and `docker stop` degrades into a 10-second wait plus SIGKILL — silently discarding every shutdown hook.
+- `backend/.dockerignore` must keep excluding `*.tsbuildinfo` (see the Configuration section for why).
+
+Added 2026-08-18 — steps 2b through 5 of the plan:
+- **`frontend/Dockerfile`** — two stages on `node:22-bookworm-slim`, 402 MB. `output: 'standalone'` was added to `frontend/next.config.ts` (with permission) so the runtime stage copies only Next's traced dependency set plus `.next/static` and `public/`, instead of the full `node_modules`. Entry point is `node server.js`, not `next start` — standalone builds its own server.
+- **`NEXT_PUBLIC_API_URL` is a build argument, not a runtime env var.** Next inlines `NEXT_PUBLIC_*` into the browser bundle during `next build`, so changing the API origin needs `docker compose ... build frontend`, never just a restart. Verified by grepping the compiled chunk inside the image.
+- **`docker-compose.prod.yml`** — postgres (healthcheck-gated, no published port) + backend + frontend + nginx; only nginx publishes 80/443. `.env.prod.example` documents the variables; compose reads `.env` on the server automatically.
+- **`nginx/conf.d/retropad.conf`** — one HTTP server block (301 to HTTPS) and two HTTPS blocks. `map $http_upgrade $connection_upgrade` is required because `Connection` is hop-by-hop: nginx drops the client's copy and it has to be re-set per request or socket.io never upgrades.
+- **`DEPLOY.md`** — DNS, server prerequisites, secrets, certificates, verification, the deploy procedure, backups, troubleshooting. Rewritten 2026-08-30 when TLS moved to Cloudflare.
+
+The whole stack was verified locally before touching the VPS: self-signed certificates dropped into the same volume, `curl --resolve` pointing the real hostnames at 127.0.0.1. Green: HTTP→HTTPS 301, frontend 200, `/health`, register + login with `HttpOnly; Secure; SameSite=Lax` cookies, an authorized `GET /boards`, CORS headers present only for the configured origin, socket.io polling handshake and a raw `101 Switching Protocols` upgrade through nginx.
+
+Cookie note for this domain layout: `SameSite=Lax` works even though the frontend and the API are different origins, because both are subdomains of `dkhomutov.dev` — same registrable domain means same-site. Moving the frontend to another domain would force `SameSite=None`.
+
+Changed 2026-08-30 — TLS moved from Let's Encrypt/certbot to Cloudflare:
+
+- **Two certificates, not one.** With the orange cloud on the connection splits in half. Browser ↔ Cloudflare uses Cloudflare's **Universal SSL** edge certificate (automatic, free, private key never leaves Cloudflare). Cloudflare ↔ nginx uses a **Cloudflare Origin CA** certificate installed on the VPS, valid 15 years and trusted **only** by Cloudflare's edge. certbot, the ACME webroot, the chicken-and-egg first issue, the renewal cron and the Let's Encrypt rate limits are all gone.
+- **The API host was renamed `api.retropad.dkhomutov.dev` → `api-retropad.dkhomutov.dev`.** Universal SSL covers the apex plus **one** level of subdomain (`dkhomutov.dev`, `*.dkhomutov.dev`) — TLS wildcards do not nest. A two-level name would make browsers reject the edge certificate, and `.dev` being HSTS-preloaded means there is no "proceed anyway" button to click past it. Deeper names need Advanced Certificate Manager ($10/month per zone). Do not "tidy" that hyphen back into a dot.
+- **Cloudflare's SSL mode must be Full (strict).** Flexible produces an infinite redirect loop — it speaks plain HTTP to an origin that redirects to HTTPS. Full encrypts but accepts any certificate at all, including an attacker's.
+- **The site now works only while the record is proxied.** The origin certificate is not browser-trusted, so turning the orange cloud off breaks it. That is the price paid for never renewing anything.
+- **Certificates are a bind mount, not a named volume**: `./nginx/certs` → `/etc/nginx/certs:ro`, with a `.gitignore` in it excluding `*.pem`/`*.key`. The `letsencrypt` external volume and `nginx/certbot/www` are gone. A bind mount survives `docker compose down -v` for the same reason `external: true` did.
+- **`trust proxy` went from 1 to 2** in `main.ts`: there are two proxies in front of Nest now, and the value counts hops from the right. Not cosmetic — `auth.controller.ts` stores `req.ip` with every refresh token, so at `1` every session would be stamped with a Cloudflare edge address instead of the user's. It is also the precondition for the still-unbuilt rate limiting.
+- **socket.io survives Cloudflare** because its default `pingInterval` is 25 s against Cloudflare's 100 s WebSocket idle timeout on the Free plan. Changing the ping settings would start dropping connections in production only.
+- Re-verified locally: self-signed certificate in `nginx/certs`, dummy upstreams aliased `frontend`/`backend` on a throwaway network, `curl --resolve`. Green — config parses, both certificates load, HTTP→HTTPS 301 on both hosts, and TLS + SNI select the right server block for each name.
+
+The VPS is **shared with another long-running service that owns port 443**, and that shapes the deploy. Host-specific details (ports, addresses, firewall state) live in `DEPLOY.md`, which is **gitignored** — like `frontend/CLAUDE.md`, it exists only in the working copy, so a fresh clone won't have it.
+
+- **Port 443 on the host is taken and is not negotiable.** nginx publishes **`8443:443`** instead: it still listens on 443 *inside* its container, only the host mapping differs. A **Cloudflare Origin Rule** (Free plan, 10 rules) rewrites the destination port to 8443 for both hostnames. Cloudflare proxies HTTPS only to 443/2053/2083/2087/2096/8443, so the number is not free choice.
+- **Port 80 is not published at all.** Under Full (strict) Cloudflare only ever reaches the origin over HTTPS, and the edge does the http→https redirect. The `listen 80` block stays in the nginx config for local testing.
+- **SSH is not on port 22 on this host.** The `ufw allow OpenSSH` profile opens 22, so the usual `allow OpenSSH && ufw enable` recipe would lock the server out permanently. Never hand over firewall commands without checking the live `ss -tlnp` first.
+- **Docker was already installed from Ubuntu's `docker.io` package** (server is Ubuntu 22.04, not 24.04). It ships **no compose v2 plugin**, so `docker compose` does not exist there — installed as a standalone CLI plugin rather than by adding docker.com's repo, which would fight the existing packages.
+- **Docker publishes ports around ufw** (its own `DOCKER` iptables chain runs first), so ufw cannot hide a published container port. Do not present ufw as the way to force traffic through Cloudflare — that needs Authenticated Origin Pulls or an interface-bound publish.
+- 3.8 GB RAM, 2 vCPU, 79 GB disk, and **no swap** — `next build` peaks around 1.5 GB, and with zero swap the kernel goes straight to the OOM killer, which may well pick the co-tenant service rather than the build. A 2 GB swapfile is a prerequisite, not a nicety.
+
+Still to do: the first real deploy on the VPS (`DEPLOY.md` end to end), then GitHub Actions CI.
+
 ## What's NOT Built Yet
 
 - BullMQ background jobs (e.g., PDF export)
@@ -364,8 +419,8 @@ Backend has **no working tests**: every `*.spec.ts` is an untouched `nest g` stu
 - Voting rounds / reset (needs retro phases first)
 - Logging (Pino) and observability (Sentry)
 - Swagger/OpenAPI
-- Rate limiting (`@nestjs/throttler`)
-- Production deployment
+- Rate limiting (`@nestjs/throttler`) — note `main.ts` already sets `trust proxy` in production, which is its precondition
+- Production deployment — **in progress**, see the Deployment section below
 - Pending-invitation flow (current member add is immediate, existing users only)
 - Repo-wide prettier pass (~950 pre-existing `prettier/prettier` errors; config disagrees with de-facto 4-space/double-quote style)
 
