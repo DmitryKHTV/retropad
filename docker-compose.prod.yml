@@ -27,6 +27,9 @@ services:
       start_period: 30s
 
   backend:
+    # CI builds and pushes this tag; the server only pulls it. `build` stays so
+    # that `up --build` still works locally and as a fallback on the server.
+    image: ghcr.io/dmitrykhtv/retropad-backend:latest
     build:
       context: ./backend
     restart: unless-stopped
@@ -46,6 +49,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN}
 
   frontend:
+    image: ghcr.io/dmitrykhtv/retropad-frontend:latest
     build:
       context: ./frontend
       args:
