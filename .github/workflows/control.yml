@@ -1,0 +1,44 @@
+name: Control
+
+# A button in the Actions tab: stop the site, or bring it back. The deploy key
+# is pinned to one script on the server, so the word chosen here arrives in
+# $SSH_ORIGINAL_COMMAND and that script decides whether it is allowed.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do on the server
+        type: choice
+        required: true
+        default: stop
+        options:
+          - stop
+          - start
+
+# Same group as Deploy: a stop can never land in the middle of a deploy.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  control:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run the requested action on the server
+        env:
+          # Through the environment, not "${{ }}" inside the script: an input
+          # spliced into shell text is how command injection gets in. `choice`
+          # already limits this one to two words, but the habit is the point.
+          ACTION: ${{ inputs.action }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=accept-new \
+              -o IdentitiesOnly=yes \
+              -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "$ACTION"
