@@ -3,3 +3,6 @@
 
 # Server runbook — kept out of the public repo (server-specific details).
 /DEPLOY.md
+
+# Local-only notes and scratch files — never committed.
+*.local.md
