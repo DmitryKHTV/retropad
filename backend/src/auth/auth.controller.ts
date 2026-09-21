@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { Throttle, ThrottlerGuard, minutes } from '@nestjs/throttler';
 import { AuthService, IssuedTokens } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
 import { JwtAuthGuard } from './guards';
@@ -16,6 +17,7 @@ import {
 } from './cookie.options';
 
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
@@ -23,6 +25,7 @@ export class AuthController {
     ) {}
 
     @Post('register')
+    @Throttle({ default: { ttl: minutes(15), limit: 10 } })
     async register(
         @Body() dto: RegisterDto,
         @Req() req: Request,
@@ -41,6 +44,7 @@ export class AuthController {
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
+    @Throttle({ default: { ttl: minutes(5), limit: 20 } })
     async login(
         @Body() dto: LoginDto,
         @Req() req: Request,
@@ -58,6 +62,7 @@ export class AuthController {
 
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
+    @Throttle({ default: { ttl: minutes(1), limit: 30 } })
     async refresh(
         @Req() req: Request,
         @Res({ passthrough: true }) res: Response,

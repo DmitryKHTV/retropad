@@ -12,6 +12,7 @@ import { ColumnsModule } from './columns/columns.module';
 import { MembersModule } from './members/members.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ThrottlerModule, minutes } from '@nestjs/throttler';
 import { VotesModule } from './votes/votes.module';
 import { APP_FILTER } from '@nestjs/core';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
@@ -31,6 +32,7 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
     MembersModule,
     RealtimeModule,
     EventEmitterModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: minutes(1), limit: 60 }]),
     VotesModule,
   ],
   controllers: [AppController],
