@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
+import type { NextFunction, Request, Response } from 'express';
 import { CorsIoAdapter } from './realtime/cors-io.adapter';
 
 async function bootstrap() {
@@ -17,9 +18,14 @@ async function bootstrap() {
     .filter(Boolean);
 
   if (config.get<string>('NODE_ENV') === 'production') {
-    app.set('trust proxy', 2);
+    app.set('trust proxy', 1);
   }
 
+  app.disable('x-powered-by');
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    next();
+  });
   app.use(cookieParser());
   app.enableCors({
     origin: corsOrigins,
