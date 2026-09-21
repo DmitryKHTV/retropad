@@ -23,6 +23,9 @@ import {VotesBudget} from "@/features/sticker/vote-sticker";
 import {SortByVotesToggle, useSortByVotes, sortStickersByVotes} from "@/features/sticker/sort-by-votes";
 import {useMe} from "@/entities/user";
 import {canManageBoard} from "@/shared/lib/permissions";
+import {describeApiError} from "@/shared/lib/describe-api-error";
+import {Button, StatusMessage} from "@/shared/ui";
+import Link from "next/link";
 
 interface BoardPageProps {
     id: string;
@@ -30,7 +33,7 @@ interface BoardPageProps {
 
 export const BoardPage = (props: BoardPageProps) => {
     const {id} = props;
-    const {data: boardData} = useBoard(id);
+    const {data: boardData, isPending, isError, error, refetch, isFetching} = useBoard(id);
     const {data: me} = useMe();
     useBoardChangesWs(id);
     const reorderMutation = useReorderColumn();
@@ -42,7 +45,35 @@ export const BoardPage = (props: BoardPageProps) => {
         useSensor(PointerSensor, {activationConstraint: {distance: 5}}),
     );
 
-    if (!boardData || !me) return null;
+    if (isError) {
+        return (
+            <main className={cls.wrapper}>
+                <StatusMessage
+                    tone="error"
+                    title={describeApiError(error, {
+                        forbidden: "You don't have access to this board.",
+                        notFound: "This board no longer exists.",
+                    })}
+                    actions={
+                        <>
+                            <Button intent="primary" onClick={() => void refetch()} disabled={isFetching}>
+                                {isFetching ? 'Retrying…' : 'Try again'}
+                            </Button>
+                            <Link href="/"><Button outline>Back to boards</Button></Link>
+                        </>
+                    }
+                />
+            </main>
+        );
+    }
+
+    if (isPending || !boardData || !me) {
+        return (
+            <main className={cls.wrapper}>
+                <StatusMessage title="Loading board…"/>
+            </main>
+        );
+    }
 
     const isOwner = canManageBoard(boardData.myRole);
     // View-only re-rank; the persisted sticker `order` is never touched.
