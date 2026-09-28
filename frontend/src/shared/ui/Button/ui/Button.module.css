@@ -4,7 +4,7 @@
     justify-content: center;
     gap: var(--gap-s);
     padding: var(--padding-m);
-    border-radius: var(--border-radius-s);
+    border-radius: var(--border-radius-m);
     border: 1px solid var(--border-subtle);
     background: var(--surface-header-tint);
     color: var(--text-icon);
