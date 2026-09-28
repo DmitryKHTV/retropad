@@ -11,9 +11,21 @@ const jetbrainsMono = JetBrains_Mono({
     display: "swap",
 });
 
+const description = 'A collaborative board for Agile retrospectives: stickers, drag-and-drop, dot-voting and live updates.';
+
 export const metadata: Metadata = {
-    title: 'Stagehand',
-    description: '',
+    metadataBase: new URL('https://retropad.dkhomutov.dev'),
+    title: 'Retropad',
+    description,
+    openGraph: {
+        type: 'website',
+        siteName: 'Retropad',
+        title: 'Retropad',
+        description,
+    },
+    twitter: {
+        card: 'summary_large_image',
+    },
 };
 
 export default function RootLayout({children}: Readonly<{ children: React.ReactNode }>) {
