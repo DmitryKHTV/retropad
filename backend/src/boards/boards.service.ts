@@ -37,6 +37,10 @@ export type ColumnWithVotes = Omit<RawColumn, 'stickers'> & {
 };
 
 export type BoardWithRole = Board & { myRole: EffectiveRole };
+export type BoardSummary = BoardWithRole & {
+  columnsCount: number;
+  stickersCount: number;
+};
 export type BoardWithColumnsAndRole = Omit<BoardWithColumns, 'columns'> & {
   columns: ColumnWithVotes[];
   myRole: EffectiveRole;
@@ -115,16 +119,24 @@ export class BoardsService {
   }
 
   // Boards the user owns OR is a member of, each annotated with the user's role
-  async findAllForViewer(userId: string): Promise<BoardWithRole[]> {
+  async findAllForViewer(userId: string): Promise<BoardSummary[]> {
     const boards = await this.prisma.board.findMany({
       where: { OR: [{ ownerId: userId }, { members: { some: { userId } } }] },
       orderBy: { createdAt: 'desc' },
-      include: { members: { where: { userId }, select: { role: true } } },
+      include: {
+        members: { where: { userId }, select: { role: true } },
+        columns: { select: { _count: { select: { stickers: true } } } },
+      },
     });
-    return boards.map(({ members, ...board }) => ({
+    return boards.map(({ members, columns, ...board }) => ({
       ...board,
       myRole:
         board.ownerId === userId ? 'OWNER' : (members[0]?.role ?? 'VIEWER'),
+      columnsCount: columns.length,
+      stickersCount: columns.reduce(
+        (sum, column) => sum + column._count.stickers,
+        0,
+      ),
     }));
   }
 
