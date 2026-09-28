@@ -70,8 +70,9 @@ Feature-first modules under `src/`: `auth`, `users`, `boards`, `columns`,
 - `PrismaService` builds `PrismaClient` with `new PrismaPg({ connectionString })`.
 - Env is validated on startup in `src/config/env.validation.ts`; read it with `configService.getOrThrow`.
 - `CORS_ORIGIN` (comma-separated) is the single source of allowed origins for HTTP and socket.io.
-- `tsconfig.build.json` pins `rootDir: ./src`; a stale `tsconfig.build.tsbuildinfo` can produce a
-  green build with an empty `dist/` — delete it and `dist/` when that happens.
+- `tsconfig.build.json` pins `rootDir: ./src`. `incremental` is off on purpose: Nest's `deleteOutDir`
+  wipes `dist/` before each build, while a `.tsbuildinfo` outside it survives and makes `tsc` report
+  a green build that emits nothing.
 
 ## Atomicity
 
