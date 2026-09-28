@@ -10,6 +10,11 @@ export interface Board {
     updatedAt: string;
 }
 
+export interface BoardSummary extends Board {
+    columnsCount: number;
+    stickersCount: number;
+}
+
 // The requester's per-board dot budget: spent + left = max (MAX_VOTES_COUNT).
 export interface MyVotes {
     spent: number;

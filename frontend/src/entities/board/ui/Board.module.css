@@ -1,7 +1,6 @@
 .wrapper {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     background: var(--surface-card);
     border: 1px solid var(--border-card);
     box-shadow: inset 0 1px 0 var(--highlight-edge-soft);
@@ -9,14 +8,46 @@
     border-radius: var(--border-radius-m);
     text-decoration: none;
     transition: border-color 0.15s ease;
+    gap: var(--gaps-m);
 
     &:hover {
         border-color: var(--border-card-hover);
     }
+
+    .title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .columns {
+        display: flex;
+        gap: var(--gap-s);
+        justify-items: stretch;
+        align-items: center;
+    }
+
+    .columnLine {
+        border-radius: var(--border-radius-m);
+        background-color: var(--surface-count-pill);
+        flex: 1;
+        height: 5px;
+    }
+
+    .boardSummary{
+        display: flex;
+        gap: var(--gaps-m);
+        font-size: 0.8rem;
+    }
+
+    .date {
+        color: var(--text-faint);
+        font-size: 0.7rem;
+    }
 }
 
 .deleteIcon {
-    font-size: 1.25rem;
+    font-size: 0.8rem;
 }
 
 .roleBadge {

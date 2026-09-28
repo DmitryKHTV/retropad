@@ -1,2 +1,2 @@
-export type { Board, BoardWithColumns, MyVotes } from './types';
+export type { Board, BoardSummary, BoardWithColumns, MyVotes } from './types';
 export { boardsQueryKey, boardQueryKey } from './keys';
