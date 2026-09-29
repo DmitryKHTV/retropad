@@ -151,6 +151,10 @@ mode Full (strict)). GitHub Actions builds images to GHCR and deploys on push to
 
 ## Testing
 
+Backend unit tests (`npm test`, `*.spec.ts` next to the service) build the service with
+`Test.createTestingModule` and replace `PrismaService` and collaborators via `useValue`.
+They run in CI.
+
 Frontend Playwright e2e in `frontend/e2e/` drive the full stack (Next on :3001, API on :3000, Postgres).
 
 - The backend must already be running; Playwright only starts the frontend.

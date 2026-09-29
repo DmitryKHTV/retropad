@@ -29,6 +29,8 @@ jobs:
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
       - run: npx tsc --noEmit
         working-directory: backend
+      - run: npm test
+        working-directory: backend
       - run: npm run build
         working-directory: backend
 
