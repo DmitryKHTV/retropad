@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches: [master]
   pull_request:
+  # Pushes to master run this from deploy.yml, which ships only after it passes.
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.ref }}

@@ -132,7 +132,8 @@ client as `myVotes.max`.
 ## Deployment
 
 Docker Compose behind nginx and Cloudflare (TLS: Universal SSL at the edge, Origin CA at nginx,
-mode Full (strict)). GitHub Actions builds images to GHCR and deploys on push to `master`.
+mode Full (strict)). GitHub Actions builds images to GHCR and deploys on push to `master`,
+once `ci.yml` (called from `deploy.yml`) has passed.
 
 - `backend/Dockerfile`: `openssl` is installed in the shared base stage (runtime-only install makes
   Prisma re-download its engine and crash as `USER node`); `prisma` is a production dependency
