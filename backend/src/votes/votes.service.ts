@@ -5,6 +5,17 @@ import {BoardEventsService} from "../realtime/board-events.service";
 import {Prisma, Vote} from "@prisma/client";
 import {MAX_VOTES_COUNT, SERIALIZATION_MAX_ATTEMPTS} from "./votes.constants";
 
+// Postgres reports a serialization failure either on a statement inside the
+// transaction or on COMMIT. Prisma maps the first to P2034; with a driver
+// adapter the second escapes as a raw DriverAdapterError. Matched by name:
+// the class lives in an internal Prisma package we do not depend on directly.
+function isSerializationFailure(e: unknown): boolean {
+    if (e instanceof Prisma.PrismaClientKnownRequestError) return e.code === 'P2034';
+    return e instanceof Error
+        && e.name === 'DriverAdapterError'
+        && (e.cause as {kind?: unknown} | undefined)?.kind === 'TransactionWriteConflict';
+}
+
 @Injectable()
 export class VotesService {
     constructor(private readonly prisma: PrismaService,
@@ -21,9 +32,7 @@ export class VotesService {
             try {
                 return await work();
             } catch (e) {
-                const isSerializationFailure =
-                    e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034';
-                if (!isSerializationFailure) throw e;
+                if (!isSerializationFailure(e)) throw e;
                 if (attempt === SERIALIZATION_MAX_ATTEMPTS) {
                     throw new ConflictException('Too much concurrent voting on this board, please retry');
                 }

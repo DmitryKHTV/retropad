@@ -16,6 +16,13 @@ const VOTE_KEY = {stickerId_userId: {stickerId: STICKER_ID, userId: USER_ID}};
 const serializationFailure = () =>
     new Prisma.PrismaClientKnownRequestError('could not serialize access', {code: 'P2034', clientVersion: 'test'});
 
+// The shape @prisma/adapter-pg throws when Postgres rejects the COMMIT itself.
+const commitSerializationFailure = () =>
+    Object.assign(new Error('TransactionWriteConflict'), {
+        name: 'DriverAdapterError',
+        cause: {kind: 'TransactionWriteConflict', originalCode: '40001'},
+    });
+
 describe('VotesService', () => {
     let service: VotesService;
 
@@ -112,6 +119,15 @@ describe('VotesService', () => {
             await expect(service.addVote(STICKER_ID, USER_ID)).resolves.toEqual({count: 1});
             expect(prisma.$transaction).toHaveBeenCalledTimes(2);
             expect(boardEvents.boardChanged).toHaveBeenCalledTimes(1);
+        });
+
+        it('replays the transaction after a serialization failure on COMMIT', async () => {
+            spent(0);
+            tx.vote.upsert.mockResolvedValue({count: 1});
+            prisma.$transaction.mockRejectedValueOnce(commitSerializationFailure());
+
+            await expect(service.addVote(STICKER_ID, USER_ID)).resolves.toEqual({count: 1});
+            expect(prisma.$transaction).toHaveBeenCalledTimes(2);
         });
 
         it('answers 409 when serialization failures persist', async () => {
