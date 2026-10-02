@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { UsersService } from '../../users/users.service';
 import { ACCESS_TOKEN_COOKIE } from '../cookie.options';
+import { isExpiredGuest } from '../../users/user-kind';
 
 export interface JwtPayload {
     sub: string;
@@ -34,7 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     async validate(payload: JwtPayload) {
         const user = await this.usersService.findById(payload.sub);
-        if (!user) {
+        if (!user || isExpiredGuest(user)) {
             throw new UnauthorizedException();
         }
 

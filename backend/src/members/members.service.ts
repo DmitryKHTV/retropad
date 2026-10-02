@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { BoardRole, Prisma } from '@prisma/client';
+import { BoardRole, Prisma, UserKind } from '@prisma/client';
 import {
   BoardAccessService,
   type EffectiveRole,
@@ -54,6 +54,14 @@ export class MembersService {
     ];
   }
 
+  /**
+   * Adds a registered user to the board by email.
+   *
+   * Demo accounts are excluded on both sides. A guest may not add anyone:
+   * guests are free to create, so their lookups would be a free way to probe
+   * which emails are registered. Guests and demo teammates as targets answer
+   * like an unknown email, since they exist only on demo boards.
+   */
   async add(
     boardId: string,
     requesterId: string,
@@ -61,8 +69,12 @@ export class MembersService {
     socketId?: string,
   ): Promise<MemberPayload> {
     await this.boardAccess.assertCanManage(boardId, requesterId);
+    const requester = await this.users.findById(requesterId);
+    if (requester?.kind !== UserKind.REGULAR) {
+      throw new ForbiddenException('Demo accounts cannot add members');
+    }
     const user = await this.users.findByEmail(dto.email);
-    if (!user) {
+    if (!user || user.kind !== UserKind.REGULAR) {
       throw new NotFoundException('No user with this email');
     }
     if (user.id === requesterId) {

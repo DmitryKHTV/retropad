@@ -96,19 +96,33 @@ model Vote {
   @@index([userId])
 }
 
+// Demo accounts: a GUEST is created by POST /auth/demo and lives for a day;
+// DEMO_TEAMMATE accounts are seeded by a migration and only ever appear as
+// members of guest boards. Neither can log in or be added by email.
+// User.expiresAt is set only for a GUEST.
+enum UserKind {
+  REGULAR
+  GUEST
+  DEMO_TEAMMATE
+}
+
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String    @id @default(uuid())
+  email        String    @unique
   passwordHash String
   name         String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  kind         UserKind  @default(REGULAR)
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   boards        Board[]
   memberships   BoardMember[]
   refreshTokens RefreshToken[]
   stickers      Sticker[]
   votes         Vote[]
+
+  @@index([kind, expiresAt])
 }
 
 model RefreshToken {

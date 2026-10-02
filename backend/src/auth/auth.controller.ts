@@ -60,6 +60,18 @@ export class AuthController {
         return { user: safeUser };
     }
 
+    @Post('demo')
+    @Throttle({ default: { ttl: minutes(15), limit: 5 } })
+    async demo(
+        @Req() req: Request,
+        @Res({ passthrough: true }) res: Response,
+    ): Promise<{ user: SafeUser }> {
+        const { tokens, user } = await this.authService.startDemo(this.contextFromRequest(req));
+        this.setAuthCookies(res, tokens);
+        const { passwordHash: _ph, ...safeUser } = user;
+        return { user: safeUser };
+    }
+
     @Post('refresh')
     @HttpCode(HttpStatus.OK)
     @Throttle({ default: { ttl: minutes(1), limit: 30 } })

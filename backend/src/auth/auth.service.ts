@@ -3,9 +3,11 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { User } from '@prisma/client';
+import { User, UserKind } from '@prisma/client';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DemoService } from '../demo/demo.service';
+import { isExpiredGuest } from '../users/user-kind';
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -42,6 +44,7 @@ export class AuthService {
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly prisma: PrismaService,
+        private readonly demoService: DemoService,
         config: ConfigService,
     ) {
         this.accessSecret = config.getOrThrow<string>('JWT_SECRET');
@@ -57,9 +60,16 @@ export class AuthService {
         return { tokens, user };
     }
 
+    async startDemo(ctx: TokenContext): Promise<{ tokens: IssuedTokens; user: User }> {
+        const user = await this.demoService.createGuest();
+        const tokens = await this.issueTokens(user, ctx);
+        return { tokens, user };
+    }
+
+    /** Demo accounts never log in by password and get the same answer as an unknown email. */
     async login(email: string, password: string, ctx: TokenContext): Promise<{ tokens: IssuedTokens; user: User }> {
         const user = await this.usersService.findByEmail(email);
-        if (!user) {
+        if (!user || user.kind !== UserKind.REGULAR) {
             throw new UnauthorizedException('Invalid credentials');
         }
 
@@ -110,7 +120,7 @@ export class AuthService {
         }
 
         const user = await this.usersService.findById(stored.userId);
-        if (!user) {
+        if (!user || isExpiredGuest(user)) {
             throw new UnauthorizedException('User no longer exists');
         }
 
@@ -142,6 +152,10 @@ export class AuthService {
         return { accessToken, accessMaxAgeMs, refreshToken, refreshMaxAgeMs };
     }
 
+    /**
+     * Revokes the presented refresh token. A guest is deleted instead, and the
+     * cascade takes their boards and tokens with it.
+     */
     async logout(rawRefreshToken: string | undefined): Promise<void> {
         if (!rawRefreshToken) {
             return;
@@ -152,6 +166,14 @@ export class AuthService {
                 secret: this.refreshSecret,
             });
         } catch {
+            return;
+        }
+        const stored = await this.prisma.refreshToken.findUnique({
+            where: { id: payload.jti },
+            select: { revokedAt: true, user: { select: { id: true, kind: true } } },
+        });
+        if (stored && !stored.revokedAt && stored.user.kind === UserKind.GUEST) {
+            await this.prisma.user.deleteMany({ where: { id: stored.user.id } });
             return;
         }
         await this.prisma.refreshToken.updateMany({
