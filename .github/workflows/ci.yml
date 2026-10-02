@@ -12,6 +12,20 @@ concurrency:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: retropad_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d retropad_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,6 +45,15 @@ jobs:
         working-directory: backend
       - run: npm test
         working-directory: backend
+      - run: npm run test:e2e
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/retropad_test?schema=public
+          JWT_SECRET: ci-access-secret-at-least-32-characters
+          JWT_EXPIRES_IN: 15min
+          JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-characters
+          JWT_REFRESH_EXPIRES_IN: 30d
+          CORS_ORIGIN: http://localhost:3001
       - run: npm run build
         working-directory: backend
 

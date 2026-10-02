@@ -82,7 +82,8 @@ Feature-first modules under `src/`: `auth`, `users`, `boards`, `columns`,
 - **Array `$transaction`** for reads that must agree — `BoardsService.findOne` (tree + vote
   totals + my votes), `MembersService.remove` (membership + that member's votes).
 - **Serializable + retry** in `VotesService`: the budget check is a read the write depends on.
-  Serialization failures (`P2034`) are retried with jittered backoff and answered with `409` if
+  Serialization failures (`P2034`, or a raw `DriverAdapterError` `TransactionWriteConflict` when
+  Postgres rejects the COMMIT itself) are retried with jittered backoff and answered with `409` if
   contention persists — never a `500`, and never "fixed" by lowering the isolation level.
 - Ordering is integer with reindex on shift; gaps are allowed.
 
@@ -154,7 +155,16 @@ once `ci.yml` (called from `deploy.yml`) has passed.
 
 Backend unit tests (`npm test`, `*.spec.ts` next to the service) build the service with
 `Test.createTestingModule` and replace `PrismaService` and collaborators via `useValue`.
-They run in CI.
+
+Backend e2e (`npm run test:e2e`, `backend/test/*.e2e-spec.ts`) boot the whole `AppModule` with
+supertest against a real Postgres:
+
+- The database name always gets a `_test` suffix (`test/test-database-url.ts`); `globalSetup` runs
+  `prisma migrate deploy` on it. Each test signs up its own users, so nothing is cleaned up.
+- `configureApp` (`src/app.setup.ts`) is shared with `main.ts`, so tests see the same pipes and
+  middleware as production. `ThrottlerGuard` is overridden: one run registers many users.
+- `cookie` v2 is ESM-only; `test/jest-e2e.json` lets ts-jest transpile it (`allowJs`).
+- CI runs both suites; e2e gets a `postgres` service container.
 
 Frontend Playwright e2e in `frontend/e2e/` drive the full stack (Next on :3001, API on :3000, Postgres).
 

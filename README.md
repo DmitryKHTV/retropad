@@ -13,7 +13,8 @@ Live: https://retropad.dkhomutov.dev
   Feature-Sliced Design
 - Backend: NestJS 11, TypeScript (strict), Prisma 7, PostgreSQL 16, Passport JWT, socket.io,
   class-validator
-- Tests: Playwright end-to-end tests against the full stack, desktop and mobile viewports
+- Tests: Jest unit tests and API end-to-end tests on a real PostgreSQL for the backend, run in CI.
+  Playwright end-to-end tests against the full stack, desktop and mobile viewports
 - Infrastructure: Docker Compose, nginx, Cloudflare, GitHub Actions, GHCR, a single VPS
 
 ```
@@ -104,7 +105,15 @@ npm install
 npm run dev
 ```
 
-The end-to-end tests need PostgreSQL and the API running. Playwright starts the web app itself.
+Backend tests. The e2e suite needs PostgreSQL and uses its own `<name>_test` database.
+
+```bash
+cd backend
+npm test
+npm run test:e2e
+```
+
+The frontend end-to-end tests need PostgreSQL and the API running. Playwright starts the web app itself.
 
 ```bash
 cd frontend
