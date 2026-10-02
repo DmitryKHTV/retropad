@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import classNames from 'classnames';
-import {useMe} from '@/entities/user/api';
+import {isGuest, useMe} from '@/entities/user';
+import {LogoutButton} from '@/features/login';
+import {formatDateTime} from '@/shared/lib/format-date';
 import {Avatar} from '@/shared/ui';
 import IconGrid from '@/shared/assets/icons/icon-grid.svg';
 import cls from './Navbar.module.css';
@@ -16,6 +18,11 @@ const NAV_ITEMS = [
 
 const HIDDEN_ROUTES = ['/login'];
 
+/**
+ * Top bar: brand, section links, a badge for a demo guest with the moment the
+ * account is deleted, the logout button and the avatar. Under 640px the brand
+ * text and the demo badge are hidden so everything fits on a phone.
+ */
 export const Navbar = () => {
     const pathname = usePathname();
     const {data: user} = useMe();
@@ -44,6 +51,14 @@ export const Navbar = () => {
             </div>
 
             <div className={cls.spacer}/>
+
+            {user && isGuest(user) && (
+                <span className={cls.demoBadge} data-testid="demo-badge">
+                    Demo account{user.expiresAt && ` · deleted ${formatDateTime(user.expiresAt)}`}
+                </span>
+            )}
+
+            <LogoutButton/>
 
             <Link href="/profile" title="Profile" className={cls.avatarLink}>
                 <Avatar user={user} size="l" className={cls.avatar}/>

@@ -1,0 +1,22 @@
+.button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.icon {
+    display: none;
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 640px) {
+    .icon {
+        display: block;
+    }
+
+    .label {
+        display: none;
+    }
+}

@@ -5,6 +5,7 @@ import cls from '@/features/login/ui/LoginForm.module.css';
 import { Button, Input } from '@/shared/ui';
 import { useLogin } from '@/features/login/api';
 import { LoginDto } from '@/features/login/model/types';
+import { DemoLoginButton } from './DemoLoginButton';
 
 type AuthFormProps = {
   onRegisterModeSwitch: () => void;
@@ -51,6 +52,7 @@ export const AuthForm = ({ onRegisterModeSwitch }: AuthFormProps) => {
           Register
         </Button>
       </div>
+      <DemoLoginButton />
     </form>
   );
 };

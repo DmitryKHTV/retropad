@@ -3,7 +3,7 @@
 A board for Agile retrospectives. Participants add stickers to columns, vote with dots, and see each
 other's changes live.
 
-Live: https://retropad.dkhomutov.dev
+Live: https://retropad.dkhomutov.dev. The login page has a "Try without signing up" button.
 
 ![Adding and voting on stickers in Retropad](docs/demo.gif)
 
@@ -32,6 +32,8 @@ browser ──▶ Cloudflare ──▶ nginx ─┬─▶ Next.js   (retropad.dk
 - Dot-voting: five dots per person per board, and several can go on one sticker. The server returns
   only totals, so nobody can see who voted for what. Stickers can be sorted by votes; this does not
   change their saved order.
+- A demo login. It creates a guest who owns a sample board shared with three demo teammates, so
+  roles and voting can be tried alone. The guest is deleted on logout or after 24 hours.
 - Changes made by one participant show up for everyone else on the board without a reload.
 - The board list, the board and the members panel show loading and error states. The layout works on
   a phone.

@@ -60,8 +60,25 @@ Feature-first modules under `src/`: `auth`, `users`, `boards`, `columns`,
 - `JwtStrategy.validate()` loads the user by `payload.sub`, strips `passwordHash`, returns `SafeUser`.
 - `JwtAuthGuard` at controller level; `@CurrentUser()` extracts `request.user`.
 - Access and refresh tokens travel as httpOnly cookies; login returns only `{ user }`.
-- `@nestjs/throttler` guards `/auth` only (register, login, refresh have their own limits).
+- `@nestjs/throttler` guards `/auth` only (register, login, refresh, demo have their own limits).
   Not an `APP_GUARD`: board endpoints are hit in bursts by drag-and-drop and voting.
+
+## Demo accounts
+
+`User.kind` is `REGULAR | GUEST | DEMO_TEAMMATE`; `expiresAt` is set only for a GUEST.
+
+- `POST /auth/demo` (`DemoService.createGuest`) creates a guest for 24 h who owns a seeded board
+  with stickers and votes from three DEMO_TEAMMATE accounts (Alex and Sam as EDITOR, Jordan as
+  VIEWER). Throttled to 5 per 15 minutes per address.
+- The teammates are seeded by the `demo_accounts` migration and shared by every guest board; their
+  roles live in `BoardMember`, so a guest changing them affects only their own board.
+- Demo accounts never log in by password and are never found by member lookups (404, as for an
+  unknown email). A guest may not add members at all (403): free accounts would make the email
+  lookup a free probe.
+- Logout deletes a guest; the cascade removes their board and the teammates' rows on it. Expired
+  guests are rejected by `JwtStrategy` and `refresh`, and swept lazily at the next demo login.
+- Frontend: `useLogout` overwrites `me` with `null` instead of removing it — `AuthGate`, `Navbar`
+  and `LogoutButton` stay subscribed to that query and would keep the previous user.
 
 ## Configuration
 

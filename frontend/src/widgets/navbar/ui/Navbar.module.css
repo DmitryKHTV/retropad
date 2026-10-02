@@ -100,3 +100,20 @@
     border-color: var(--border-focus);
     color: var(--text-white);
 }
+
+.demoBadge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-icon);
+    white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+    .brandText,
+    .demoBadge {
+        display: none;
+    }
+}

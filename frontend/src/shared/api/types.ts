@@ -1,7 +1,12 @@
+/** GUEST and DEMO_TEAMMATE are demo accounts, see POST /auth/demo. */
+export type UserKind = 'REGULAR' | 'GUEST' | 'DEMO_TEAMMATE';
+
 export interface User {
   id: string;
   email: string;
   name: string | null;
+  kind: UserKind;
+  expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
