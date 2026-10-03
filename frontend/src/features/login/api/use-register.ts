@@ -8,7 +8,8 @@ export const useRegister = () => {
   return useMutation({
     mutationFn: (registerData: RegisterDto) =>
       apiClient<AuthResponse>('/auth/register', { method: 'POST', body: registerData }),
-    onSuccess: ({ user }) => {
+    onSuccess: async ({ user }) => {
+      await queryClient.cancelQueries({ queryKey: ME_QUERY_KEY });
       queryClient.setQueryData(ME_QUERY_KEY, user);
     },
   });

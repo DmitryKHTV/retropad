@@ -11,7 +11,8 @@ export const useDemoLogin = () => {
 
   return useMutation({
     mutationFn: () => apiClient<AuthResponse>('/auth/demo', { method: 'POST' }),
-    onSuccess: ({ user }) => {
+    onSuccess: async ({ user }) => {
+      await queryClient.cancelQueries({ queryKey: ME_QUERY_KEY });
       queryClient.setQueryData(ME_QUERY_KEY, user);
     },
   });

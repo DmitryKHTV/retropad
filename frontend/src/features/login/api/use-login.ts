@@ -8,7 +8,8 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (loginData: LoginDto) =>
       apiClient<AuthResponse>('/auth/login', { method: 'POST', body: loginData }),
-    onSuccess: ({ user }) => {
+    onSuccess: async ({ user }) => {
+      await queryClient.cancelQueries({ queryKey: ME_QUERY_KEY });
       queryClient.setQueryData(ME_QUERY_KEY, user);
     },
   });
