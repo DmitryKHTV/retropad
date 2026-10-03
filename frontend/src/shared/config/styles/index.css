@@ -76,6 +76,8 @@
     --border-radius-m: 8px;
     --border-radius-l: 16px;
 
+    --navbar-height: 61px;
+
     --border: 1px solid var(--border-subtle);
 }
 

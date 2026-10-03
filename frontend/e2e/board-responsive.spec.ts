@@ -48,6 +48,23 @@ test.describe('board layout', () => {
         expect(overflowsHorizontally).toBe(true);
     });
 
+    // A landscape phone leaves ~165px under the navbar and the board header. The
+    // scroller has min-height: min(400px, 100dvh - navbar), so it refuses to
+    // shrink into a slit and the page scrolls instead; scrolled down, the board
+    // fills the screen under the sticky navbar.
+    test('landscape phone keeps the board as tall as the screen allows', async ({page}) => {
+        test.skip(test.info().project.name !== 'mobile', 'mobile viewport only');
+
+        await page.setViewportSize({width: 844, height: 390});
+        const {boardId} = await setupBoard(page);
+        await gotoBoard(page, boardId);
+
+        const navbarHeight = 61;
+        const box = await page.getByTestId('board-scroll').boundingBox();
+        expect(box).not.toBeNull();
+        expect(box!.height).toBeGreaterThanOrEqual(390 - navbarHeight - 2);
+    });
+
     test('desktop renders wide, readable columns', async ({page}) => {
         test.skip(test.info().project.name !== 'desktop', 'desktop viewport only');
 
