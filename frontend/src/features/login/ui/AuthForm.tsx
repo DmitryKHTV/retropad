@@ -63,7 +63,7 @@ export const AuthForm = ({ onRegisterModeSwitch }: AuthFormProps) => {
         <DemoLoginButton />
       </form>
       <p className={cls.switchMode}>
-        Don't have an account?{' '}
+        {"Don't have an account? "}
         <button
           type="button"
           className={cls.switchLink}
