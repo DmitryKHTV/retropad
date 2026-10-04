@@ -18,7 +18,7 @@ test('login and register forms fit the viewport', async ({page}) => {
     await expect(page.getByTestId('demo-login')).toBeVisible();
     await expectNoHorizontalScroll(page);
 
-    await page.getByRole('button', {name: 'Register'}).click();
-    await expect(page.getByRole('heading')).toBeVisible();
+    await page.getByTestId('register-mode').click();
+    await expect(page.getByTestId('register-form')).toBeVisible();
     await expectNoHorizontalScroll(page);
 });

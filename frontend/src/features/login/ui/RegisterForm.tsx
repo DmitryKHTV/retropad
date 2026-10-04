@@ -40,43 +40,68 @@ export const RegisterForm = ({ onAuthorizationModeChange }: RegisterFormProps) =
     : error?.message ?? null;
 
   return (
-    <form className={cls.loginForm} onSubmit={onSubmit}>
-      <h1 className={cls.header}>Registration</h1>
-      <Input name="name" type="text" placeholder="Name" autoComplete="name" />
-      <Input name="email" type="email" placeholder="Email" autoComplete="email" required />
-      <Input
-        name="password"
-        type="password"
-        placeholder="Password"
-        autoComplete="new-password"
-        required
-        minLength={8}
-      />
-      <Input
-        name="confirmPassword"
-        type="password"
-        placeholder="Confirm Password"
-        autoComplete="new-password"
-        required
-        minLength={8}
-      />
-      {message && (
-        <p role="alert" className={cls.error}>
-          {message}
-        </p>
-      )}
-      <div className={cls.options}>
-        <Button intent="primary" type="submit" disabled={isPending}>
-          {isPending ? 'Registering…' : 'Register'}
-        </Button>
+    <>
+      <form className={cls.loginForm} onSubmit={onSubmit} data-testid="register-form">
+        <h1 className={cls.header}>Create your account</h1>
+        <Input
+          label="Name (optional)"
+          name="name"
+          type="text"
+          placeholder="How your team sees you"
+          autoComplete="name"
+        />
+        <Input
+          label="Email"
+          name="email"
+          type="email"
+          placeholder="you@company.com"
+          autoComplete="email"
+          required
+        />
+        <Input
+          label="Password"
+          name="password"
+          type="password"
+          placeholder="At least 8 characters"
+          autoComplete="new-password"
+          required
+          minLength={8}
+        />
+        <Input
+          label="Confirm password"
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+        />
+        {message && (
+          <p role="alert" className={cls.error}>
+            {message}
+          </p>
+        )}
         <Button
-          onClick={onAuthorizationModeChange}
-          type="button"
+          intent="primary"
+          type="submit"
           disabled={isPending}
+          className={cls.submit}
+          data-testid="register-submit"
         >
-          Authorize
+          {isPending ? 'Creating account…' : 'Sign up'}
         </Button>
-      </div>
-    </form>
+      </form>
+      <p className={cls.switchMode}>
+        Already have an account?{' '}
+        <button
+          type="button"
+          className={cls.switchLink}
+          onClick={onAuthorizationModeChange}
+          disabled={isPending}
+          data-testid="login-mode"
+        >
+          Log in
+        </button>
+      </p>
+    </>
   );
 };

@@ -35,7 +35,7 @@ export const Navbar = () => {
                 <span className={cls.logo}>
                     <IconGrid className={cls.icon}/>
                 </span>
-                <span className={cls.brandText}>RETRO</span>
+                <span className={cls.brandText}>Retropad</span>
             </Link>
 
             <div className={cls.links}>

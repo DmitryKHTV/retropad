@@ -32,7 +32,7 @@ test.describe('mutation error toasts', () => {
         await failVotes(page);
         await gotoBoard(page, boardId);
 
-        await page.getByRole('button', {name: 'Vote', exact: true}).first().click();
+        await page.getByTestId('vote-sticker').first().click();
 
         await expect(toasts(page)).toHaveCount(1);
         await expect(toasts(page)).toContainText(SERVER_ERROR_TEXT);
@@ -45,7 +45,7 @@ test.describe('mutation error toasts', () => {
         await failVotes(page);
         await gotoBoard(page, boardId);
 
-        const vote = page.getByRole('button', {name: 'Vote', exact: true}).first();
+        const vote = page.getByTestId('vote-sticker').first();
         for (let i = 1; i <= 12; i++) {
             await vote.click();
             await expect(toasts(page)).toHaveCount(i);
@@ -60,11 +60,11 @@ test.describe('mutation error toasts', () => {
 
     test('a failed login is shown in the form, not as a toast', async ({page}) => {
         await page.goto('/login');
-        await page.getByPlaceholder('Email').fill(`nobody_${Date.now()}@example.com`);
-        await page.getByPlaceholder('Password').fill('wrong-password');
-        await page.getByRole('button', {name: 'Submit'}).click();
+        await page.getByTestId('login-email').fill(`nobody_${Date.now()}@example.com`);
+        await page.getByTestId('login-password').fill('wrong-password');
+        await page.getByTestId('login-submit').click();
 
-        await expect(page.getByRole('alert')).toBeVisible();
+        await expect(page.getByTestId('login-error')).toBeVisible();
         await expect(toasts(page)).toHaveCount(0);
     });
 });

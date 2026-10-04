@@ -25,34 +25,55 @@ export const AuthForm = ({ onRegisterModeSwitch }: AuthFormProps) => {
   };
 
   return (
-    <form className={cls.loginForm} onSubmit={onLogin}>
-      <h1 className={cls.header}>Authorize</h1>
-      <Input name="email" type="email" placeholder="Email" autoComplete="email" required />
-      <Input
-        name="password"
-        type="password"
-        placeholder="Password"
-        autoComplete="current-password"
-        required
-      />
-      {error && (
-        <p role="alert" className={cls.error}>
-          {error.message}
-        </p>
-      )}
-      <div className={cls.options}>
-        <Button intent="primary" type="submit" disabled={isPending}>
-          {isPending ? 'Submitting…' : 'Submit'}
-        </Button>
+    <>
+      <form className={cls.loginForm} onSubmit={onLogin} data-testid="login-form">
+        <h1 className={cls.header}>Log in to Retropad</h1>
+        <Input
+          label="Email"
+          name="email"
+          type="email"
+          placeholder="you@company.com"
+          autoComplete="email"
+          required
+          data-testid="login-email"
+        />
+        <Input
+          label="Password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          data-testid="login-password"
+        />
+        {error && (
+          <p role="alert" className={cls.error} data-testid="login-error">
+            {error.message}
+          </p>
+        )}
         <Button
-          onClick={onRegisterModeSwitch}
-          type="button"
+          intent="primary"
+          type="submit"
           disabled={isPending}
+          className={cls.submit}
+          data-testid="login-submit"
         >
-          Register
+          {isPending ? 'Logging in…' : 'Log in'}
         </Button>
-      </div>
-      <DemoLoginButton />
-    </form>
+        <div className={cls.divider}>or</div>
+        <DemoLoginButton />
+      </form>
+      <p className={cls.switchMode}>
+        Don't have an account?{' '}
+        <button
+          type="button"
+          className={cls.switchLink}
+          onClick={onRegisterModeSwitch}
+          disabled={isPending}
+          data-testid="register-mode"
+        >
+          Sign up
+        </button>
+      </p>
+    </>
   );
 };

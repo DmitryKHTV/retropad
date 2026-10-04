@@ -46,6 +46,7 @@ export const VoteControl = ({stickerId, boardId, total, mine, canAddMore}: VoteC
                     onClick={() => vote({stickerId, boardId})}
                     disabled={pending || !canAddMore}
                     aria-label="Vote"
+                    data-testid="vote-sticker"
                 >
                     Vote
                 </Button>
