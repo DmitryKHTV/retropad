@@ -7,6 +7,7 @@ export const useAddMember = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
+        meta: { suppressErrorToast: true },
         mutationFn: ({ boardId, ...dto }: AddMemberDto) =>
             apiClient<BoardMember>(`/boards/${boardId}/members`, {
                 method: 'POST',

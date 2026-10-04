@@ -6,6 +6,7 @@ export const useRegister = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { suppressErrorToast: true },
     mutationFn: (registerData: RegisterDto) =>
       apiClient<AuthResponse>('/auth/register', { method: 'POST', body: registerData }),
     onSuccess: async ({ user }) => {

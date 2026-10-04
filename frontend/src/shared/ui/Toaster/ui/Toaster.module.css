@@ -1,0 +1,8 @@
+/*
+ * Collapsed, Sonner layers every visible toast; keep the stack to the front
+ * three so it reads as a stack. Expanding still shows all VISIBLE_TOASTS.
+ */
+.toaster [data-sonner-toast][data-expanded='false']:not([data-index='0'], [data-index='1'], [data-index='2']) {
+    opacity: 0;
+    pointer-events: none;
+}

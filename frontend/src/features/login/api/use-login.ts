@@ -6,6 +6,7 @@ export const useLogin = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
+    meta: { suppressErrorToast: true },
     mutationFn: (loginData: LoginDto) =>
       apiClient<AuthResponse>('/auth/login', { method: 'POST', body: loginData }),
     onSuccess: async ({ user }) => {

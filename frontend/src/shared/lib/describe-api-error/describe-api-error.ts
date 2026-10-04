@@ -1,4 +1,4 @@
-import {ApiError} from "@/shared/api";
+import {ApiError} from "@/shared/api/api-error";
 
 type Descriptions = {
     forbidden?: string;
