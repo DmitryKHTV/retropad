@@ -1,23 +1,103 @@
+/*
+ * Three base values; every offset of the floating label is derived from them.
+ * Declared on both: a bare input has no .field around it.
+ */
+.field,
 .input{
-    background: var(--surface-input);
-    border: 1px solid var(--border-focus);
-    border-radius: var(--border-radius-s);
+    --input-font-size: 15px;
+    --input-line-height: 20px;
+    --input-padding-y: 6px;
+    --label-scale: 0.8;
+
+    /* Height of the floated label's line, reserved above the input. */
+    --label-float-space: calc(var(--input-line-height) * var(--label-scale));
+    /* Resting label sits exactly where the input's text starts. */
+    --label-rest-top: calc(var(--label-float-space) + var(--input-padding-y));
+}
+
+.input{
+    padding: var(--input-padding-y) 0;
+    font-size: var(--input-font-size);
+    line-height: var(--input-line-height);
     color: var(--text-white);
-    padding: 5px 10px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-focus);
+    border-radius: 0;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:hover:not(:disabled){
+    border-bottom-color: var(--text-faint);
+}
+
+/* The focus indicator: a brighter, 2px underline (the second pixel is a shadow, so nothing shifts). */
+.input:focus{
+    border-bottom-color: var(--text-white);
+    box-shadow: 0 1px 0 0 var(--text-white);
+}
+
+.input:disabled{
+    opacity: 0.6;
 }
 
 .input::placeholder{
     color: var(--placeholder);
 }
 
+/* Chrome paints autofilled fields with its own background; delay that paint indefinitely. */
+.input:autofill{
+    -webkit-text-fill-color: var(--text-white);
+    transition: background-color 600000s 0s;
+}
 
 .field{
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    padding-top: var(--label-float-space);
 }
 
 .label{
-    font-size: 13px;
-    color: var(--text-secondary);
+    position: absolute;
+    top: var(--label-rest-top);
+    left: 0;
+    font-size: var(--input-font-size);
+    line-height: var(--input-line-height);
+    color: var(--text-muted);
+    pointer-events: none;
+    transform-origin: left top;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.field .input::placeholder{
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.field .input:focus::placeholder{
+    opacity: 1;
+}
+
+.input:focus + .label,
+.input:not(:placeholder-shown) + .label{
+    transform: translateY(calc(-1 * var(--label-rest-top))) scale(var(--label-scale));
+}
+
+/* Separate rule: a browser without :autofill would drop the whole selector list above. */
+.input:autofill + .label{
+    transform: translateY(calc(-1 * var(--label-rest-top))) scale(var(--label-scale));
+}
+
+.input:focus + .label{
+    color: var(--text-white);
+}
+
+@media (prefers-reduced-motion: reduce){
+    .input,
+    .label,
+    .field .input::placeholder{
+        transition: none;
+    }
 }
