@@ -3,6 +3,7 @@ import '@/shared/config/styles/index.css';
 import {Providers} from '@/app/providers';
 import {Navbar} from '@/widgets/navbar';
 import {JetBrains_Mono} from "next/font/google";
+import Script from "next/script";
 import cls from './layout.module.css';
 
 const jetbrainsMono = JetBrains_Mono({
@@ -47,6 +48,13 @@ export default function RootLayout({children}: Readonly<{ children: React.ReactN
                 {children}
             </div>
         </Providers>
+        {process.env.NODE_ENV === 'production' && (
+            <Script
+                src="https://static.cloudflareinsights.com/beacon.min.js"
+                data-cf-beacon='{"token": "b35f75c1f93b4a77be0fcd889a843664"}'
+                strategy="afterInteractive"
+            />
+        )}
         </body>
         </html>
     );
