@@ -7,6 +7,7 @@ import {MemberRow, useBoardMembers} from "@/entities/member";
 import {AddMemberForm, LeaveBoardButton, MemberControls} from "@/features/board/manage-members";
 import {canManageBoard} from "@/shared/lib/permissions";
 import {describeApiError} from "@/shared/lib/describe-api-error";
+import IconClose from "@/shared/assets/icons/icon-close.svg";
 import cls from "./BoardMembersPanel.module.css";
 
 interface BoardMembersPanelProps {
@@ -19,6 +20,10 @@ export const BoardMembersPanel = ({boardId, myRole}: BoardMembersPanelProps) => 
     const {data: members, isPending, isError, error} = useBoardMembers(boardId, open);
     const isOwner = canManageBoard(myRole);
 
+    const handleClose = () => {
+        setOpen(false);
+    }
+
     return (
         <div className={cls.wrapper}>
             <Button outline onClick={() => setOpen((v) => !v)}>Share</Button>
@@ -26,7 +31,18 @@ export const BoardMembersPanel = ({boardId, myRole}: BoardMembersPanelProps) => 
                 <>
                     <div className={cls.backdrop} onClick={() => setOpen(false)}/>
                     <div className={cls.panel}>
-                        <span className={cls.title}>Board members</span>
+                        <div className={cls.header}>
+                            <span className={cls.title}>Board members</span>
+                            <Button
+                                type="button"
+                                className={cls.close}
+                                onClick={handleClose}
+                                aria-label="Close"
+                                title="Close"
+                            >
+                                <IconClose/>
+                            </Button>
+                        </div>
                         <div className={cls.list}>
                             {isPending && <span className={cls.hint}>Loading...</span>}
                             {isError && <span className={cls.error} role="alert">{describeApiError(error)}</span>}
